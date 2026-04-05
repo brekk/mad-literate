@@ -13,3 +13,8 @@ export findIndex = (fn, lx) => {
   }
   return helper(false, 0, lx)
 }
+import List from "List"
+
+
+
+export chop = (x, str) => List.slice(x, List.length(str), str)

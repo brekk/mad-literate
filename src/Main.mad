@@ -1,10 +1,29 @@
+import Dict from "Dictionary"
+import { Left, Right } from "Either"
 import File from "File"
 import Fn from "Function"
 import IO from "IO"
 import List from "List"
 import { Just, Nothing } from "Maybe"
+import { fromMaybe } from "Maybe"
 import String from "String"
 import Wish from "Wish"
+
+import {
+  ConcreteBooleanFlag,
+  ConcreteFloatFlag,
+  ConcreteIntegerFlag,
+  ConcreteStringFlag,
+  Exclusive,
+  Flag,
+  Garbage,
+  InvalidFlag,
+  ParseBoolean,
+  ParseString,
+  Unspecial,
+  parser,
+  stringValue,
+} from "Margs"
 
 import { processBody, processFileWithHeadmatter } from "@/Body"
 import {
@@ -17,6 +36,7 @@ import {
   MAIN_START,
 } from "@/Constants"
 import Headmatter from "@/Headmatter"
+import { chop } from "@/List"
 import { findIndex } from "@/List"
 import { log } from "@/Log"
 import {
@@ -33,6 +53,43 @@ import {
 
 
 
+definition = [
+  Flag("input", ["i"], ParseString, Unspecial),
+  Flag("output", ["o"], ParseString, Unspecial),
+  Flag("run", ["r"], ParseBoolean, Unspecial),
+  Flag("help", ["h"], ParseBoolean, Exclusive),
+]
+parseArgs = where {
+  Left(raw) =>
+    Left(raw)
+
+  Right(dict) =>
+    do {
+      // Dict.get expects consistent values, so we're cheating that a bit
+      getDef = (def, x) => pipe(
+        Dict.get($, dict),
+        map(stringValue),
+        fromMaybe(def),
+      )(x)
+      mistake = "MARGS_NON_STRING"
+      toBool = (x) => x == mistake ? false : true
+      getBool = pipe(
+        getDef(mistake),
+        toBool,
+      )
+      getString = getDef(mistake)
+      input = getString("input")
+      output = getString("output")
+      run = getBool("run")
+      help = getBool("help")
+
+      return Right({ input, output, run, help })
+    }
+}
+
+
+
+
 madlibJson = File.read("./madlib.json")
 
 getLiterate = pipe(
@@ -40,7 +97,17 @@ getLiterate = pipe(
   Fn.ifElse(hasHeadMatter, processFileWithHeadmatter, processBody),
 )
 
-main = () => {
+main = (args) => {
+  myCLI = pipe(
+    parser(definition),
+    parseArgs,
+  )
+  pipe(
+    chop(1),
+    String.unwords,
+    myCLI,
+    IO.pTrace("ARGS!"),
+  )(args)
   pipe(
     IO.pTrace("INPUT"),
     File.read,
