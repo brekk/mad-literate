@@ -1,54 +1,29 @@
-import File from "File"
 import Fn from "Function"
-import IO from "IO"
 import List from "List"
-import { Just, Nothing } from "Maybe"
 import String from "String"
-import Wish from "Wish"
 
-import {
-  BAR,
-  COMMA,
-  COMMENT,
-  DOUBLE_COLON,
-  HEAD_MATTER_MARK,
-  MAD_MARKER,
-  MAIN_START,
-} from "@/Constants"
+import { COMMENT, MAD_MARKER, MAIN_START } from "@/Constants"
 import Headmatter from "@/Headmatter"
 import { findIndex } from "@/List"
 import { log } from "@/Log"
-import {
-  brace,
-  concat,
-  encommentAll,
-  enquote,
-  entype,
-  hasBar,
-  hasComma,
-  hasDoubleColon,
+import { concat, encommentAll, hasMadmarker, isHeadmark } from "@/String"
+
+
+
+export processBody = Fn.ifElse(
   hasMadmarker,
-  isHeadmark,
-} from "@/String"
-
-
-
-export processBody = pipe(
-  Fn.ifElse(
-    hasMadmarker,
-    (v) => pipe(
-      encommentAll,
-      map(Fn.when(Fn.equals(COMMENT ++ MAD_MARKER), Fn.always(MAIN_START))),
-      log.headmatter("marked!"),
-      String.unlines,
-      concat($, "\n}"),
-    )(v),
-    pipe(
-      encommentAll,
-      log.headmatter("unmarked marked!"),
-      String.unlines,
-      (body) => String.unlines(["main = () => {", body, "}"]),
-    ),
+  (v) => pipe(
+    encommentAll,
+    map(Fn.when(Fn.equals(COMMENT ++ MAD_MARKER), Fn.always(MAIN_START))),
+    log.headmatter("marked!"),
+    String.unlines,
+    concat($, "\n}"),
+  )(v),
+  pipe(
+    encommentAll,
+    log.headmatter("unmarked marked!"),
+    String.unlines,
+    (body) => String.unlines(["main = () => {", body, "}"]),
   ),
 )
 

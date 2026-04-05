@@ -1,0 +1,9 @@
+import { caseN2, caseN3, report } from "Study"
+
+import { processBody, processBodyWithHeadmatter, processFileWithHeadmatter } from "@/Body"
+
+
+
+report(processBody, "processBody", [#[[], ""]])
+
+// report(caseN2(processFileWithHeadmatter), "processFileWithHeadmatter", [#[#["1.2.3", []], ""]])

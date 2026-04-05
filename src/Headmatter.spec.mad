@@ -1,0 +1,43 @@
+import String from "String"
+
+import { caseN2, caseN3, report } from "Study"
+
+import { processHead, processImports, subentity } from "@/Headmatter"
+
+
+
+report(
+  caseN2(subentity),
+  "subentity",
+  [#[#[true, "blah"], "type { blah }"], #[#[false, "blah"], "blah"]],
+)
+
+report(
+  caseN3(processImports),
+  "subentity",
+  [
+    #[#[true, "blah", ["jorp"]], `import type { blah } from "jorp"`],
+    #[#[true, "a , b , c", ["jorp"]], `import type { a , b , c } from "jorp"`],
+    #[#[false, "blah", ["jorp"]], `import blah from "jorp"`],
+    #[#[false, "A | B", ["Alpha"]], `import { A , B } from "Alpha"`],
+  ],
+)
+
+report(
+  processHead,
+  "processHead",
+  [
+    #[
+      ["blah", "a | b: blah", "x, y, z: nice", "Just, Nothing : Maybe", "Either :: Either"],
+      String.unlines([
+        `import blah from "blah"`,
+        `import { a , b } from "blah"`,
+        `import { x, y, z } from "nice"`,
+        `import { Just, Nothing } from "Maybe"`,
+        `import type { Either } from "Either"`,
+      ]),
+    ],
+    #[[":x"], `import  from "x"`],
+    #[["::x"], `import type {  } from "x"`],
+  ],
+)
