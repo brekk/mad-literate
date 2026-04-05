@@ -1,0 +1,15 @@
+findIndex :: (a -> Boolean) -> List a -> Integer
+export findIndex = (fn, lx) => {
+  helper = (barf, ix, ly) => if (!barf) {
+    where(ly) {
+      [] =>
+        -1
+
+      [a, ...b] =>
+        helper(fn(a), ix + 1, b)
+    }
+  } else {
+    ix
+  }
+  return helper(false, 0, lx)
+}

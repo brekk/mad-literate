@@ -5,6 +5,8 @@ Fn: Function
 Maybe :: Maybe
 ---
 
+This content exists before the `main` declaration, because of the magic `===` delimiter
+
   type RGB a = Red(a) | Blue(a) | Green(a)
 
 ===

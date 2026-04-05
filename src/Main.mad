@@ -6,14 +6,22 @@ import { Just, Nothing } from "Maybe"
 import String from "String"
 import Wish from "Wish"
 
+import {
+  BAR,
+  COMMA,
+  COMMENT,
+  DOUBLE_COLON,
+  HEAD_MATTER_MARK,
+  MAD_MARKER,
+  MAIN_START,
+} from "@/Constants"
+import { findIndex } from "@/List"
 import { log } from "@/Log"
 
 
 
 concat = (a, b) => a ++ b
 
-HEAD_MATTER_MARK = "---"
-MAD_MARKER = "==="
 
 madlibJson = File.read("./madlib.json")
 
@@ -22,38 +30,12 @@ isMadmark = String.startsWith(MAD_MARKER)
 
 hasHeadMatter = List.any(isHeadmark)
 hasMadmarker = List.any(isMadmark)
-/*
-processBody = pipe(
-  map(
-    Fn.ifElse(
-      String.startsWith("  "),
-      (body) => String.unlines(["main = () => {", body, "}"]),
-      String.replace("^", "//"),
-    ),
-  ),
-  String.unlines,
-)
-*/
 
-findIndex :: (a -> Boolean) -> List a -> Integer
-findIndex = (fn, lx) => {
-  helper = (barf, ix, ly) => if (!barf) {
-    where(ly) {
-      [] =>
-        -1
 
-      [a, ...b] =>
-        helper(fn(a), ix + 1, b)
-    }
-  } else {
-    ix
-  }
-  return helper(false, 0, lx)
-}
 
-MAIN_START = "main = () => {"
 
-encomment = map(Fn.when(Fn.complement(String.startsWith("  ")), concat(" // ")))
+
+encomment = map(Fn.when(Fn.complement(String.startsWith("  ")), concat(COMMENT)))
 
 // List.filter(String.startsWith("  ")),
 // List.slice(cut, List.length(v)),
@@ -62,17 +44,13 @@ processBody = (lines) => {
   return pipe(
     Fn.ifElse(
       () => marked,
-      pipe(
-        (v) => String.unlines([
-          pipe(
-            encomment,
-            map(Fn.when(Fn.equals(" // " ++ MAD_MARKER), Fn.always(MAIN_START))),
-            log.headmatter("marked!"),
-            String.unlines,
-            concat($, "\n}"),
-          )(v),
-        ]),
-      ),
+      (v) => pipe(
+        encomment,
+        map(Fn.when(Fn.equals(COMMENT ++ MAD_MARKER), Fn.always(MAIN_START))),
+        log.headmatter("marked!"),
+        String.unlines,
+        concat($, "\n}"),
+      )(v),
       pipe(
         encomment,
         log.headmatter("unmarked marked!"),
@@ -84,7 +62,6 @@ processBody = (lines) => {
 }
 
 
-
 enquote = (a) => `"${String.trim(a)}"`
 
 brace = pipe(
@@ -92,9 +69,9 @@ brace = pipe(
   concat($, " }"),
 )
 
-hasBar = String.includes('|')
-hasComma = String.includes(',')
-hasDoubleColon = String.contains("::")
+hasBar = String.includes(BAR)
+hasComma = String.includes(COMMA)
+hasDoubleColon = String.contains(DOUBLE_COLON)
 
 entype = concat("type ")
 
@@ -113,25 +90,22 @@ subentity = (doTypeImport, raw) => {
 mash = (doTypeImport, a, b) => "import "
     ++ subentity(doTypeImport, a)
     ++ " from "
-    ++ (List.length(b) > 0 ? enquote(String.unwords(b)) : enquote(a))
+    ++ enquote(List.length(b) > 0 ? String.unwords(b) : a)
 
 processHead = pipe(
   List.reject(String.isEmpty),
   map(
-    (raw) => {
-      isTypeImport = hasDoubleColon(raw)
-      return pipe(
-        String.split(":"),
-        map(String.trim),
-        where {
-          [] =>
-            ""
+    (raw) => pipe(
+      String.split(":"),
+      map(String.trim),
+      where {
+        [] =>
+          ""
 
-          [a, ...b] =>
-            mash(isTypeImport, a, b)
-        },
-      )(raw)
-    },
+        [a, ...b] =>
+          mash(hasDoubleColon(raw), a, b)
+      },
+    )(raw),
   ),
   String.unlines,
 )
@@ -140,10 +114,12 @@ processBodyWithHeadmatter = (head, body) => {
   hat = processHead(head)
   return String.unlines([
     "// This file was automatically created by mad-literate",
+    "\n",
     hat,
     "\n",
     "\n",
     processBody(body),
+    "\n",
   ])
 }
 processFileWithHeadmatter :: List String -> String
