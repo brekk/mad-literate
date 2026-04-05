@@ -1,7 +1,8 @@
 import type { Either } from "Either"
+import type { Parser } from "Json/Parse"
 
 import Dict from "Dictionary"
-import { Left, Right } from "Either"
+import Either from "Either"
 import File from "File"
 import FilePath from "FilePath"
 import Fn from "Function"
@@ -42,6 +43,8 @@ import Headmatter from "@/Headmatter"
 import { chop } from "@/List"
 import { findIndex } from "@/List"
 import { log } from "@/Log"
+import MadlibJson from "@/MadlibJson/MadlibDotJson"
+import { showVersion } from "@/MadlibJson/Version"
 import {
   brace,
   concat,
@@ -70,13 +73,17 @@ alias MargsConfig = {
   output :: String,
   run :: Boolean,
 }
+// type MargsConfigParsed = MargsConfigParsed(MargsConfig)
+
+// parser :: Json.Parser MargsConfigParsed
+// parser = Json.map5((cwd, help, input, output, run) => 
 
 // parseArgs :: Either (List ConcreteExpression) (Dictionary String ConcreteExpression)
 parseArgs = where {
-  Left(raw) =>
-    Left(raw)
+  Either.Left(raw) =>
+    Either.Left(raw)
 
-  Right(dict) =>
+  Either.Right(dict) =>
     do {
       // Dict.get expects consistent values, so we're cheating that a bit
       getDef = (def, x) => pipe(
@@ -98,58 +105,84 @@ parseArgs = where {
       cwd = getDef(".", "cwd")
       out :: MargsConfig
       out = { input, output, run, help, cwd }
-      return Right(out)
+      return Either.Right(out)
     }
 }
 
 
 
+madlibJson = pipe(
+  log.base("madlib.json"),
+  File.read,
+  log.base("read from"),
+  map(MadlibJson.parse),
+)("./madlib.json")
 
-madlibJson = File.read("./madlib.json")
-
-getLiterate = pipe(
+literati = (version, raw) => pipe(
   String.lines,
-  Fn.ifElse(hasHeadMatter, processFileWithHeadmatter, processBody),
-)
+  Fn.ifElse(hasHeadMatter, processFileWithHeadmatter(version), processBody),
+)(raw)
+
 margsParser = pipe(
   parser(definition),
   parseArgs,
 )
 
-main = (raw_args) => {
+
+relative = (cwd, i) => FilePath.joinPath([cwd, i])
+
+
+readAndWriteToFile :: String -> String -> String -> Wish String Boolean
+readAndWriteToFile = (version, input, output) => {
+  transform = pipe(
+    File.read,
+    map(literati(version)),
+    chain(File.write(output)),
+    map(Fn.always(true)),
+    Wish.mapRej(Fn.always("Unable to write to file: " ++ output)),
+  )
+  return transform(input)
+}
+
+ender = Wish.fulfill(
+  (e) => {
+    IO.pTrace("bad", e)
+    return {}
+  },
+  (x) => {
+    IO.pTrace("Created new file from source:", x)
+    return {}
+  },
+)
+
+convert :: String -> List String -> Either String (Wish a Boolean)
+convert = (version, raw) => pipe(
+  chop(1),
+  String.unwords,
+  // string to Either
+  margsParser,
+  map(
+    (args) => {
+      locate = relative(args.cwd)
+      input = locate(args.input)
+      output = locate(args.output)
+      return readAndWriteToFile(version, input, output)
+    },
+  ),
+)(raw)
+
+main = (rawargs) => {
   pipe(
-    chop(1),
-    String.unwords,
-    margsParser,
-    IO.pTrace("ARGS!"),
-    map(
-      (args) => {
-        cwd = args.cwd
-        locate = (i) => FilePath.joinPath([cwd, i])
-        return pipe(
-          .input,
-          locate,
-          File.read,
-          map(getLiterate),
-          chain(
-            pipe(
-              .output,
-              locate,
-              File.write,
-            )(args),
-          ),
-          Wish.fulfill(
-            (e) => {
-              IO.pTrace("bad", e)
-              return {}
-            },
-            (x) => {
-              IO.pTrace("good", x)
-              return {}
-            },
-          ),
-        )(args)
-      },
+    Wish.mapRej(Fn.always("Unable to read madlib.json file!")),
+    chain(
+      map(
+        (json) => pipe(
+          convert(showVersion(json.version)),
+          Either.fromRight(Wish.bad("Unable to transform the source file!")),
+          ender,
+        )(rawargs),
+      ),
     ),
-  )(raw_args)
+    ender,
+  )(madlibJson)
 }

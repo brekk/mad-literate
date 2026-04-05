@@ -3,11 +3,18 @@ import { env, tag, tagWithScope } from "PartyBus"
 
 
 LIT = "mad-literate"
+scoped = tagWithScope(LIT)
 
 export TAGS = {
   base: tag(LIT),
-  headmatter: tagWithScope(LIT, ["headmatter"]),
-  body: tagWithScope(LIT, ["headmatter"]),
+  headmatter: scoped(["headmatter"]),
+  body: scoped(["headmatter"]),
+  cli: scoped(["cli"]),
 }
 
-export log = { base: env(TAGS.base), headmatter: env(TAGS.headmatter), body: env(TAGS.body) }
+export log = {
+  base: env(TAGS.base),
+  headmatter: env(TAGS.headmatter),
+  body: env(TAGS.body),
+  cli: env(TAGS.cli),
+}

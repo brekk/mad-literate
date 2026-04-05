@@ -1,0 +1,8 @@
+import Crypto from "Crypto"
+
+import type { Version } from "./Version"
+import {} from "./Version"
+
+
+hashVersion :: Version -> String
+export hashVersion = (version) => pipe(show, Crypto.md5)(version)

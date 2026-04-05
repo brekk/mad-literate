@@ -1,5 +1,4 @@
-// This file was automatically created by mad-literate
-
+/* This file was automatically created by mad-literate@0.0.1 */
 
 import type { Maybe } from "Maybe"
 
@@ -41,3 +40,5 @@ main = () => {
   // 
   // 
 }
+
+/* This file was automatically created by mad-literate@0.0.1 */

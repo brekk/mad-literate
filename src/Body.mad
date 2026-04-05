@@ -52,24 +52,22 @@ export processBody = pipe(
   ),
 )
 
-export processBodyWithHeadmatter = (head, body) => {
+column = String.join("\n\n")
+
+export processBodyWithHeadmatter = (version, head, body) => {
   hat = Headmatter.processHead(head)
-  return String.unlines([
-    "// This file was automatically created by mad-literate",
-    "\n",
-    hat,
-    "\n",
-    "\n",
-    processBody(body),
-    "\n",
-  ])
+  banner = "/* This file was automatically created by mad-literate@" ++ version ++ " */"
+  header = banner
+  footer = banner
+  return column([header, hat, processBody(body), footer, "\n"])
 }
-processFileWithHeadmatter :: List String -> String
-export processFileWithHeadmatter = (lines) => {
+processFileWithHeadmatter :: String -> List String -> String
+export processFileWithHeadmatter = (version, lines) => {
   ind = findIndex(isHeadmark, lines)
   return ind < 0
     ? processBody(lines)
     : processBodyWithHeadmatter(
+      version,
       List.slice(0, ind - 2, lines),
       List.slice(ind, List.length(lines), lines),
     )

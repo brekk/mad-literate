@@ -1,0 +1,393 @@
+import type { Maybe } from "Maybe"
+
+import { andDo } from "Monad"
+import { equals, ifElse, not, always } from "Function"
+import { Just, Nothing } from "Maybe"
+import IO from "IO"
+
+import type { Context, VersionInfo } from "./Context"
+import type { Dependency } from "./Dependency"
+import type { MadlibDotJson } from "./MadlibDotJson"
+import type { VersionDotLock } from "./VersionDotLock"
+import type { VersionRange } from "./Version"
+
+import { findByName, updateEntry } from "./Context"
+import { intersectRanges, isInRange } from "./Version"
+import Color from "./Color"
+
+
+export alias ValidationInput = {
+  madlibDotJson :: MadlibDotJson,
+  versionDotLock :: Maybe VersionDotLock,
+  computedBuildHash :: String,
+  computedVersionHash :: String
+}
+
+
+export alias ValidationOutput = {
+  context :: Context,
+  shouldCopy :: Boolean,
+  dependency :: Dependency,
+  madlibDotJson :: MadlibDotJson
+}
+
+
+export type Warning
+  = OutOfRangeVersion
+  | InvalidVersionHash
+  | InvalidBuildHash
+  | VersionDotLockMissing
+  | BuildHashCouldNotBeGenerated
+
+
+export type Error
+  = CopyToMadlibModulesFailed(String)
+  | MadlibDotJsonCouldNotBeLoaded(String)
+
+
+export type Validate a
+  = Valid(a)
+  | NotValid(List Warning, a)
+  | ValidationError(List Warning, Error, Maybe a)
+
+
+alias RangeOutput = {
+  versionInfo :: VersionInfo,
+  shouldCopy :: Boolean
+}
+
+
+instance Functor Validate {
+  map = (fn, m) => where(m) {
+    Valid(a) =>
+      Valid(fn(a))
+
+    NotValid(warnings, a) =>
+      NotValid(warnings, fn(a))
+
+    ValidationError(warnings, e, a) =>
+      ValidationError(warnings, e, map(fn, a))
+  }
+}
+
+
+instance Applicative Validate {
+  pure = (a) => Valid(a)
+
+  ap = (fn, m) => where(#[fn, m]) {
+    #[Valid(f), Valid(a)] =>
+      Valid(f(a))
+
+    #[Valid(f), NotValid(warnings, a)] =>
+      NotValid(warnings, f(a))
+
+    #[Valid(f), ValidationError(warnings, err, maybeA)] =>
+      ValidationError(warnings, err, map(f, maybeA))
+
+    #[NotValid(warnings, f), Valid(a)] =>
+      NotValid(warnings, f(a))
+
+    #[NotValid(warningsA, f), NotValid(warningsB, a)] =>
+      NotValid(warningsA ++ warningsB, f(a))
+
+    #[NotValid(warningsA, f), ValidationError(warningsB, err, maybeA)] =>
+      ValidationError(warningsA ++ warningsB, err, map(f, maybeA))
+
+    #[ValidationError(warningsA, errA, maybeF), ValidationError(warningsB, errB, maybeA)] =>
+      ValidationError(warningsA ++ warningsB, errA, ap(maybeF, maybeA))
+
+    #[ValidationError(warnings, err, maybeF), Valid(a)] =>
+      ValidationError(warnings, err, ap(maybeF, Just(a)))
+
+    #[ValidationError(warningsA, err, maybeF), NotValid(warningsB, a)] =>
+      ValidationError(warningsA ++ warningsB, err, ap(maybeF, Just(a)))
+  }
+}
+
+
+instance Monad Validate {
+  of = pure
+
+  chain = (f, m) => where(m) {
+    Valid(a) =>
+      f(a)
+
+    NotValid(_, a) =>
+      pipe(
+        f,
+        combine(m)
+      )(a)
+
+    ValidationError(warnings, err, maybeA) =>
+      ValidationError(warnings, err, chain(pipe(f, getValidationValue), maybeA))
+  }
+}
+
+
+
+printError :: a -> Error -> a
+export printError = (a, error) => where(IO.trace("err", error)) {
+  CopyToMadlibModulesFailed(msg) =>
+    IO.putLineAndPass(`  - ${Color.red(msg)}`, a)
+
+  MadlibDotJsonCouldNotBeLoaded(msg) =>
+    IO.putLineAndPass(`  - ${Color.red(msg)}`, a)
+}
+
+printWarning :: a -> Warning -> a
+export printWarning = (a, warning) => where(warning) {
+  OutOfRangeVersion =>
+    IO.putLineAndPass(`  - ${Color.yellow("Package version does not match constraints")}`, a)
+
+  InvalidVersionHash =>
+    IO.putLineAndPass(`  - ${Color.yellow("Package version hash is corrupted")}`, a)
+
+  InvalidBuildHash =>
+    IO.putLineAndPass(
+      `  - ${Color.yellow("Build hash is corrupted")}`,
+      a
+    )
+
+  VersionDotLockMissing =>
+    IO.putLineAndPass(`  - ${Color.yellow("version.lock file missing")}`, a)
+
+  _ =>
+    a
+}
+
+
+mapError :: (Error -> Error) -> Validate a -> Validate a
+export mapError = (f, v) => where(v) {
+  ValidationError(warnings, e, maybeA) =>
+    ValidationError(warnings, f(e), maybeA)
+
+  _ =>
+    v
+}
+
+
+combine :: Validate a -> Validate b -> Validate b
+export combine = (a, b) => where(#[a, b]) {
+  #[Valid(_), _] =>
+    b
+
+  #[NotValid(warnings, _), Valid(x)] =>
+    NotValid(warnings, x)
+
+  #[NotValid(warningsA, _), NotValid(warningsB, x)] =>
+    NotValid(warningsA ++ warningsB, x)
+
+  #[NotValid(warningsA, _), ValidationError(warningsB, error, x)] =>
+    ValidationError(warningsA ++ warningsB, error, x)
+
+  #[ValidationError(warnings, error, maybeA), Valid(v)] =>
+    ValidationError(warnings, error, map(always(v), maybeA))
+
+  #[ValidationError(warningsA, error, maybeA), NotValid(warningsB, v)] =>
+    ValidationError(
+      warningsA ++ warningsB,
+      error,
+      map(always(v), maybeA)
+    )
+
+  #[ValidationError(warningsA, _, _), ValidationError(warningsB, error, m)] =>
+    ValidationError(
+      warningsA ++ warningsB,
+      error,
+      m
+    )
+}
+
+
+addWarning :: Warning -> Validate a -> Validate a
+export addWarning = (warning, validationResult) => where(validationResult) {
+  Valid(a) =>
+    NotValid([warning], a)
+
+  NotValid(warnings, a) =>
+    NotValid([warning, ...warnings], a)
+
+  ValidationError(warnings, error, a) =>
+    ValidationError([warning, ...warnings], error, a)
+}
+
+
+getWarnings :: Validate a -> List Warning
+export getWarnings = (validation) => where(validation) {
+  NotValid(ws, _) =>
+    ws
+
+  ValidationError(ws, _, _) =>
+    ws
+
+  _ =>
+    []
+}
+
+
+fail :: Error -> Validate a -> Validate a
+export fail = (error, validation) =>
+  andDo(validation, ValidationError(getWarnings(validation), error, Nothing))
+
+
+failWithRecoverable :: Error -> Validate a -> Validate a
+export failWithRecoverable = (error, validation) => where(validation) {
+  Valid(a) =>
+    ValidationError([], error, Just(a))
+
+  NotValid(warnings, a) =>
+    ValidationError(warnings, error, Just(a))
+
+  ValidationError(_, _, _) =>
+    validation
+}
+
+
+hasFailed :: Validate a -> Boolean
+export hasFailed = where {
+  ValidationError(_, _, _) =>
+    true
+
+  _ =>
+    false
+}
+
+
+setValidationResultValue :: b -> Validate a -> Validate b
+setValidationResultValue = (value) => where {
+  Valid(_) =>
+    Valid(value)
+
+  NotValid(warnings, _) =>
+    NotValid(warnings, value)
+
+  ValidationError(warnings, error, _) =>
+    ValidationError(warnings, error, Just(value))
+}
+
+unsafeGetValidationValue :: Validate a -> a
+export unsafeGetValidationValue = where {
+  Valid(a) =>
+    a
+
+  NotValid(_, a) =>
+    a
+
+  ValidationError(_, _, Just(a)) =>
+    a
+
+  _ =>
+    ???
+}
+
+getValidationValue :: Validate a -> Maybe a
+getValidationValue = where {
+  Valid(a) =>
+    Just(a)
+
+  NotValid(_, a) =>
+    Just(a)
+
+  ValidationError(_, _, maybeA) =>
+    maybeA
+}
+
+
+buildGoodRangeResult :: MadlibDotJson -> VersionInfo -> VersionRange -> Validate RangeOutput
+buildGoodRangeResult = (madlibDotJson, versionInfo, versionRange) => Valid({
+  versionInfo: { version: Just(madlibDotJson.version), range: versionRange },
+  shouldCopy: Just(madlibDotJson.version) != versionInfo.version
+})
+
+
+buildBadRangeResult :: MadlibDotJson -> VersionInfo -> VersionRange -> Validate RangeOutput
+buildBadRangeResult = (madlibDotJson, versionInfo, versionRange) => NotValid(
+  [OutOfRangeVersion],
+  {
+    versionInfo: {
+      version: versionInfo.version == Nothing
+        ? Just(madlibDotJson.version)
+        : versionInfo.version,
+      range: versionRange
+    },
+    shouldCopy: versionInfo.version == Nothing,
+  }
+)
+
+
+buildValidationOutput :: Context -> MadlibDotJson -> Dependency -> Validate RangeOutput -> Validate ValidationOutput
+buildValidationOutput = (context, madlibDotJson, dependency, rangeResult) => {
+  rangeOutput = unsafeGetValidationValue(rangeResult)
+
+  validationOutput = {
+    context: updateEntry(
+      madlibDotJson.name,
+      rangeOutput.versionInfo,
+      context
+    ),
+    shouldCopy: rangeOutput.shouldCopy,
+    dependency: { ...dependency, name: Just(madlibDotJson.name) },
+    madlibDotJson
+  }
+
+  return setValidationResultValue(validationOutput, rangeResult)
+}
+
+
+validateVersion :: Context -> Dependency -> ValidationInput -> Validate ValidationOutput
+validateVersion = (context, dependency, validationInput) => {
+  madlibDotJson = validationInput.madlibDotJson
+  versionInfo = findByName(madlibDotJson.name, context)
+
+  return pipe(
+    intersectRanges(dependency.versionRange),
+    ifElse(
+      isInRange(madlibDotJson.version),
+      buildGoodRangeResult(madlibDotJson, versionInfo),
+      buildBadRangeResult(madlibDotJson, versionInfo)
+    ),
+    buildValidationOutput(context, madlibDotJson, dependency)
+  )(versionInfo.range)
+}
+
+
+validateHashes :: ValidationInput -> Validate ValidationInput
+validateHashes = (validationInput) => {
+  validatedBuildHash = where(validationInput.versionDotLock) {
+    Just(versionDotLock) =>
+      ifElse(
+        pipe(equals(validationInput.computedBuildHash), not),
+        always(NotValid([InvalidBuildHash], {})),
+        always(Valid({})),
+        versionDotLock.buildHash
+      )
+
+    Nothing =>
+      Valid({})
+  }
+
+  validatedVersionHash = where(validationInput.versionDotLock) {
+    Just(versionDotLock) =>
+      ifElse(
+        pipe(equals(validationInput.computedVersionHash), not),
+        always(NotValid([InvalidVersionHash], {})),
+        always(Valid({})),
+        versionDotLock.versionHash
+      )
+
+    Nothing =>
+      Valid({})
+  }
+
+  return setValidationResultValue(
+    validationInput,
+    combine(validatedBuildHash, validatedVersionHash)
+  )
+}
+
+
+validate :: Context -> Dependency -> ValidationInput -> Validate ValidationOutput
+export validate = (context, dependency, validationInput) => pipe(
+  validateHashes,
+  chain(validateVersion(context, dependency))
+)(validationInput)

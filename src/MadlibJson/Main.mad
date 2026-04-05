@@ -1,0 +1,13 @@
+import { fulfill } from "Wish"
+import { identity } from "Function"
+import IO from "IO"
+
+import { run } from "./Run"
+import { defaultConfig } from "./Config"
+
+main = () => {
+  pipe(
+    run,
+    fulfill(IO.trace("error"), identity)
+  )(defaultConfig)
+}
