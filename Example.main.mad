@@ -1,11 +1,21 @@
 // This file was automatically created by mad-literate
 import IO from "IO"
-import Maybe from "Maybe"
+import { Just, Nothing } from "Maybe"
+import { Just , Nothing } from "Maybe"
+import type { Just , Nothing } from "Maybe"
+import type { Just, Nothing } from "Maybe"
+import Fn from "Function"
+import type { Maybe } from "Maybe"
+import { Left , Right } from "Either"
 
 
 
 
 main = () => {
   a = 100
-  IO.pTrace("A levels?", a)
+  
+  pipe(
+    Fn.ifElse((x) => x % 2, Red, Blue),
+    IO.pTrace("What color is 102?")
+  )(102)
 }

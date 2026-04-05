@@ -6,26 +6,25 @@ import { Just, Nothing } from "Maybe"
 import String from "String"
 import Wish from "Wish"
 
+import { log } from "@/Log"
+
 
 
 HEAD_MATTER_MARK = "---"
 
+madlibJson = File.read("./madlib.json")
+
 isHeadmark = String.startsWith(HEAD_MATTER_MARK)
+isMadmark = String.startsWith(HEAD_MATTER_MARK)
 
 hasHeadMatter = List.any(isHeadmark)
+hasMadmarker = List.any(isMadmark)
 
 processBody = pipe(
   List.filter(String.startsWith("  ")),
-  // map(String.trim),
   String.unlines,
   (body) => String.unlines(["main = () => {", body, "}"]),
 )
-/*
-xhelper = (ly, ix) => where (ly) {
-  [] => []
-  [a, ...b] => [fn(a, ix), ...xhelper(b, ix + 1)]
-}
-*/
 
 findIndex :: (a -> Boolean) -> List a -> Integer
 findIndex = (fn, lx) => {
@@ -43,19 +42,54 @@ findIndex = (fn, lx) => {
   return helper(false, 0, lx)
 }
 
-processHead = pipe(
-  map(
-    pipe(
-      String.split(":"),
-      map(String.trim),
-      where {
-        [] =>
-          ""
+concat = (a, b) => a ++ b
+enquote = (a) => `"${String.trim(a)}"`
 
-        [a, ...b] =>
-          "import " ++ a ++ " from " ++ String.unwords(b)
-      },
-    ),
+brace = pipe(
+  concat("{ "),
+  concat($, " }"),
+)
+
+hasBar = String.includes('|')
+hasComma = String.includes(',')
+hasDoubleColon = String.contains("::")
+
+entype = concat("type ")
+
+
+subentity = (doTypeImport, raw) => {
+  spike = Fn.always(hasBar(raw))
+  doubleColon = Fn.always(doTypeImport)
+  return pipe(
+    Fn.when(spike, String.replace("\\|", ",")),
+    Fn.when(Fn.either(hasComma, doubleColon), brace),
+    Fn.when(doubleColon, entype),
+    String.trim,
+  )(raw)
+}
+
+mash = (doTypeImport, a, b) => "import "
+    ++ subentity(doTypeImport, a)
+    ++ " from "
+    ++ (List.length(b) > 0 ? enquote(String.unwords(b)) : enquote(a))
+
+processHead = pipe(
+  List.reject(String.isEmpty),
+  map(
+    (raw) => {
+      isTypeImport = hasDoubleColon(raw)
+      return pipe(
+        String.split(":"),
+        map(String.trim),
+        where {
+          [] =>
+            ""
+
+          [a, ...b] =>
+            mash(isTypeImport, a, b)
+        },
+      )(raw)
+    },
   ),
   String.unlines,
 )

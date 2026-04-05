@@ -1,0 +1,13 @@
+import { env, tag, tagWithScope } from "PartyBus"
+
+
+
+LIT = "mad-literate"
+
+export TAGS = {
+  base: tag(LIT),
+  headmatter: tagWithScope(LIT, ["headmatter"]),
+  body: tagWithScope(LIT, ["headmatter"]),
+}
+
+export log = { base: env(TAGS.base), headmatter: env(TAGS.headmatter), body: env(TAGS.body) }

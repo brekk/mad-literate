@@ -1,6 +1,16 @@
-IO: "IO"
-Maybe: "Maybe"
+IO
+Just, Nothing : Maybe
+Just | Nothing : Maybe
+
+Just | Nothing :: Maybe
+  Just, Nothing :: Maybe
+
+Fn: Function
+Maybe :: Maybe
+Left | Right : Either
 ---
+type RGB a = Red(a) | Blue(a) | Green(a)
+===
 
 # Mad Literate Syntax
 
@@ -8,6 +18,18 @@ It's basically Markdown but also the code ends up being used as the body of a ru
 
   a = 100
 
-You can define values and everything!
 
-  IO.pTrace("A levels?", a)
+## Headmatter
+
+The Headmatter mark, three dashes in a row (`---`) is a magic delimiter which allows for automatic imports with minimal effort
+
+ 1. A line with a single value such as `IO` with no colon is implied to be: `IO: IO`
+ 2. A line with a colon-delimited value, such as `Fn: Function` is compiled as `import Fn from "Function"`
+
+This means that `Fn: Function` and the `IO` in this file above the headmatter mark allow us to do this:
+  
+  pipe(
+    Fn.ifElse((x) => x % 2, Red, Blue),
+    IO.pTrace("What color is 102?")
+  )(102)
+
