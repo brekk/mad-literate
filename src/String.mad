@@ -1,0 +1,33 @@
+import Fn from "Function"
+import List from "List"
+import String from "String"
+
+import { BAR, COMMA, COMMENT, DOUBLE_COLON, HEAD_MATTER_MARK, MAD_MARKER } from "@/Constants"
+
+
+
+export concat = (a, b) => a ++ b
+
+export encomment = map(Fn.when(Fn.complement(String.startsWith("  ")), concat(COMMENT)))
+
+
+
+export enquote = (a) => `"${String.trim(a)}"`
+
+export brace = pipe(
+  concat("{ "),
+  concat($, " }"),
+)
+
+
+export hasBar = String.includes(BAR)
+export hasComma = String.includes(COMMA)
+export hasDoubleColon = String.contains(DOUBLE_COLON)
+
+export entype = concat("type ")
+
+export isHeadmark = String.startsWith(HEAD_MATTER_MARK)
+export isMadmark = String.startsWith(MAD_MARKER)
+
+export hasHeadMatter = List.any(isHeadmark)
+export hasMadmarker = List.any(isMadmark)

@@ -1,0 +1,40 @@
+import Fn from "Function"
+import List from "List"
+import String from "String"
+
+import { brace, enquote, entype, hasBar, hasComma, hasDoubleColon } from "@/String"
+
+
+
+export subentity = (doTypeImport, raw) => {
+  spike = Fn.always(hasBar(raw))
+  doubleColon = Fn.always(doTypeImport)
+  return pipe(
+    Fn.when(spike, String.replace("\\|", ",")),
+    Fn.when(Fn.either(hasComma, doubleColon), brace),
+    Fn.when(doubleColon, entype),
+    String.trim,
+  )(raw)
+}
+export processImports = (doTypeImport, a, b) => "import "
+    ++ subentity(doTypeImport, a)
+    ++ " from "
+    ++ enquote(List.length(b) > 0 ? String.unwords(b) : a)
+
+export processHead = pipe(
+  List.reject(String.isEmpty),
+  map(
+    (raw) => pipe(
+      String.split(":"),
+      map(String.trim),
+      where {
+        [] =>
+          ""
+
+        [a, ...b] =>
+          processImports(hasDoubleColon(raw), a, b)
+      },
+    )(raw),
+  ),
+  String.unlines,
+)

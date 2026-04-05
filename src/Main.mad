@@ -6,6 +6,7 @@ import { Just, Nothing } from "Maybe"
 import String from "String"
 import Wish from "Wish"
 
+import { processBody, processFileWithHeadmatter } from "@/Body"
 import {
   BAR,
   COMMA,
@@ -15,131 +16,29 @@ import {
   MAD_MARKER,
   MAIN_START,
 } from "@/Constants"
+import Headmatter from "@/Headmatter"
 import { findIndex } from "@/List"
 import { log } from "@/Log"
+import {
+  brace,
+  concat,
+  encomment,
+  enquote,
+  entype,
+  hasBar,
+  hasComma,
+  hasDoubleColon,
+  hasHeadMatter,
+} from "@/String"
 
-
-
-concat = (a, b) => a ++ b
 
 
 madlibJson = File.read("./madlib.json")
-
-isHeadmark = String.startsWith(HEAD_MATTER_MARK)
-isMadmark = String.startsWith(MAD_MARKER)
-
-hasHeadMatter = List.any(isHeadmark)
-hasMadmarker = List.any(isMadmark)
-
-
-
-
-
-encomment = map(Fn.when(Fn.complement(String.startsWith("  ")), concat(COMMENT)))
-
-// List.filter(String.startsWith("  ")),
-// List.slice(cut, List.length(v)),
-processBody = (lines) => {
-  marked = hasMadmarker(lines)
-  return pipe(
-    Fn.ifElse(
-      () => marked,
-      (v) => pipe(
-        encomment,
-        map(Fn.when(Fn.equals(COMMENT ++ MAD_MARKER), Fn.always(MAIN_START))),
-        log.headmatter("marked!"),
-        String.unlines,
-        concat($, "\n}"),
-      )(v),
-      pipe(
-        encomment,
-        log.headmatter("unmarked marked!"),
-        String.unlines,
-        (body) => String.unlines(["main = () => {", body, "}"]),
-      ),
-    ),
-  )(lines)
-}
-
-
-enquote = (a) => `"${String.trim(a)}"`
-
-brace = pipe(
-  concat("{ "),
-  concat($, " }"),
-)
-
-hasBar = String.includes(BAR)
-hasComma = String.includes(COMMA)
-hasDoubleColon = String.contains(DOUBLE_COLON)
-
-entype = concat("type ")
-
-
-subentity = (doTypeImport, raw) => {
-  spike = Fn.always(hasBar(raw))
-  doubleColon = Fn.always(doTypeImport)
-  return pipe(
-    Fn.when(spike, String.replace("\\|", ",")),
-    Fn.when(Fn.either(hasComma, doubleColon), brace),
-    Fn.when(doubleColon, entype),
-    String.trim,
-  )(raw)
-}
-
-mash = (doTypeImport, a, b) => "import "
-    ++ subentity(doTypeImport, a)
-    ++ " from "
-    ++ enquote(List.length(b) > 0 ? String.unwords(b) : a)
-
-processHead = pipe(
-  List.reject(String.isEmpty),
-  map(
-    (raw) => pipe(
-      String.split(":"),
-      map(String.trim),
-      where {
-        [] =>
-          ""
-
-        [a, ...b] =>
-          mash(hasDoubleColon(raw), a, b)
-      },
-    )(raw),
-  ),
-  String.unlines,
-)
-
-processBodyWithHeadmatter = (head, body) => {
-  hat = processHead(head)
-  return String.unlines([
-    "// This file was automatically created by mad-literate",
-    "\n",
-    hat,
-    "\n",
-    "\n",
-    processBody(body),
-    "\n",
-  ])
-}
-processFileWithHeadmatter :: List String -> String
-processFileWithHeadmatter = (lines) => {
-  ind = findIndex(isHeadmark, lines)
-  return ind < 0
-    ? processBody(lines)
-    : processBodyWithHeadmatter(
-      List.slice(0, ind - 2, lines),
-      List.slice(ind, List.length(lines), lines),
-    )
-}
-
-
 
 getLiterate = pipe(
   String.lines,
   Fn.ifElse(hasHeadMatter, processFileWithHeadmatter, processBody),
 )
-// getLiterate = processBody
 
 main = () => {
   pipe(
