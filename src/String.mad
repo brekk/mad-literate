@@ -8,7 +8,8 @@ import { BAR, COMMA, COMMENT, DOUBLE_COLON, HEAD_MATTER_MARK, MAD_MARKER } from 
 
 export concat = (a, b) => a ++ b
 
-export encomment = map(Fn.when(Fn.complement(String.startsWith("  ")), concat(COMMENT)))
+export encomment = Fn.when(Fn.complement(String.startsWith("  ")), concat(COMMENT))
+export encommentAll = map(encomment)
 
 
 
@@ -31,3 +32,5 @@ export isMadmark = String.startsWith(MAD_MARKER)
 
 export hasHeadMatter = List.any(isHeadmark)
 export hasMadmarker = List.any(isMadmark)
+
+export chop = (x, str) => String.slice(x, String.length(str), str)

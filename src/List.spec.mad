@@ -1,0 +1,10 @@
+import { caseN2, report } from "Study"
+
+import { chop, findIndex } from "@/List"
+
+
+
+report(findIndex((x) => x % 2 == 0), "findIndex", [#[[1, 3, 5, 7], -1], #[[1, 1, 1, 2], 4]])
+
+source = ["a", "b", "c", "d", "e"]
+report(chop($, source), "chop", [#[2, ["c", "d", "e"]], #[1, ["b", "c", "d", "e"]]])

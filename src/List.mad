@@ -1,3 +1,7 @@
+import List from "List"
+
+
+
 findIndex :: (a -> Boolean) -> List a -> Integer
 export findIndex = (fn, lx) => {
   helper = (barf, ix, ly) => if (!barf) {
@@ -13,8 +17,5 @@ export findIndex = (fn, lx) => {
   }
   return helper(false, 0, lx)
 }
-import List from "List"
 
-
-
-export chop = (x, str) => List.slice(x, List.length(str), str)
+export chop = (x, lx) => List.slice(x, List.length(lx), lx)

@@ -1,0 +1,35 @@
+import { caseN2, report } from "Study"
+
+import {
+  brace,
+  chop,
+  concat,
+  encomment,
+  encommentAll,
+  enquote,
+  entype,
+  hasBar,
+  hasComma,
+  hasDoubleColon,
+  hasHeadMatter,
+  hasMadmarker,
+  isHeadmark,
+  isMadmark,
+} from "@/String"
+
+
+
+report(concat("test"), "concat", [#["pants", "testpants"]])
+report(encomment, "encomment", [#["blah blah blah", "// blah blah blah"]])
+report(encommentAll, "encommentAll", [#[["blah blah blah"], ["// blah blah blah"]]])
+report(enquote, "enquote", [#["aaa", `"aaa"`]])
+report(brace, "brace", [#["whatever", "{ whatever }"]])
+report(hasBar, "hasBar", [#["|", true], #["whatever", false]])
+report(hasComma, "hasComma", [#[",", true], #["nope", false]])
+report(hasDoubleColon, "hasDoubleColon", [#["::", true], #["nope", false]])
+report(entype, "entype", [#["x", "type x"]])
+report(isHeadmark, "isHeadmark", [#["---", true], #["no", false]])
+report(isMadmark, "isMadmark", [#["===", true], #["no", false]])
+report(hasHeadMatter, "hasHeadMatter", [#[["---"], true], #[["no"], false]])
+report(hasMadmarker, "hasMadmarker", [#[["==="], true], #[["no"], false]])
+report(chop(2), "chop", [#["alphabet", "phabet"]])

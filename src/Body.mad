@@ -21,7 +21,7 @@ import { log } from "@/Log"
 import {
   brace,
   concat,
-  encomment,
+  encommentAll,
   enquote,
   entype,
   hasBar,
@@ -37,14 +37,14 @@ export processBody = pipe(
   Fn.ifElse(
     hasMadmarker,
     (v) => pipe(
-      encomment,
+      encommentAll,
       map(Fn.when(Fn.equals(COMMENT ++ MAD_MARKER), Fn.always(MAIN_START))),
       log.headmatter("marked!"),
       String.unlines,
       concat($, "\n}"),
     )(v),
     pipe(
-      encomment,
+      encommentAll,
       log.headmatter("unmarked marked!"),
       String.unlines,
       (body) => String.unlines(["main = () => {", body, "}"]),
