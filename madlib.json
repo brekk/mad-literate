@@ -1,0 +1,26 @@
+{
+  "name": "mad-literate",
+  "version": "0.0.1",
+  "main": "src/Main.mad",
+  "dependencies": [
+    {
+      "url": "https://github.com/madlib-lang/madmarkdown-parser/archive/refs/tags/v0.0.6.zip",
+      "description": "MarkdownParser",
+      "minVersion": "0.0.6"
+    },
+    {
+      "url": "https://github.com/brekk/study/archive/refs/tags/v0.0.3.zip",
+      "description": "Study",
+      "minVersion": "0.0.3"
+    },
+    {
+      "url": "https://github.com/brekk/party-bus/archive/refs/tags/v0.0.6.zip",
+      "description": "PartyBus",
+      "minVersion": "0.0.6"
+    }
+  ],
+  "importAliases": {
+    ".": "src"
+  }
+}
+

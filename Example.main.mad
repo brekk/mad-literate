@@ -1,0 +1,11 @@
+// This file was automatically created by mad-literate
+import IO from "IO"
+import Maybe from "Maybe"
+
+
+
+
+main = () => {
+  a = 100
+  IO.pTrace("A levels?", a)
+}

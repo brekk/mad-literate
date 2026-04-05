@@ -1,0 +1,13 @@
+IO: "IO"
+Maybe: "Maybe"
+---
+
+# Mad Literate Syntax
+
+It's basically Markdown but also the code ends up being used as the body of a runnable / Main function.
+
+  a = 100
+
+You can define values and everything!
+
+  IO.pTrace("A levels?", a)

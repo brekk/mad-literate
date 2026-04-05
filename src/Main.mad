@@ -1,0 +1,109 @@
+import File from "File"
+import Fn from "Function"
+import IO from "IO"
+import List from "List"
+import { Just, Nothing } from "Maybe"
+import String from "String"
+import Wish from "Wish"
+
+
+
+HEAD_MATTER_MARK = "---"
+
+isHeadmark = String.startsWith(HEAD_MATTER_MARK)
+
+hasHeadMatter = List.any(isHeadmark)
+
+processBody = pipe(
+  List.filter(String.startsWith("  ")),
+  // map(String.trim),
+  String.unlines,
+  (body) => String.unlines(["main = () => {", body, "}"]),
+)
+/*
+xhelper = (ly, ix) => where (ly) {
+  [] => []
+  [a, ...b] => [fn(a, ix), ...xhelper(b, ix + 1)]
+}
+*/
+
+findIndex :: (a -> Boolean) -> List a -> Integer
+findIndex = (fn, lx) => {
+  helper = (barf, ix, ly) => if (!barf) {
+    where(ly) {
+      [] =>
+        -1
+
+      [a, ...b] =>
+        helper(fn(a), ix + 1, b)
+    }
+  } else {
+    ix
+  }
+  return helper(false, 0, lx)
+}
+
+processHead = pipe(
+  map(
+    pipe(
+      String.split(":"),
+      map(String.trim),
+      where {
+        [] =>
+          ""
+
+        [a, ...b] =>
+          "import " ++ a ++ " from " ++ String.unwords(b)
+      },
+    ),
+  ),
+  String.unlines,
+)
+
+processBodyWithHeadmatter = (head, body) => {
+  hat = processHead(head)
+  return String.unlines([
+    "// This file was automatically created by mad-literate",
+    hat,
+    "\n",
+    "\n",
+    processBody(body),
+  ])
+}
+processFileWithHeadmatter :: List String -> String
+processFileWithHeadmatter = (lines) => {
+  ind = findIndex(isHeadmark, lines)
+  return ind < 0
+    ? processBody(lines)
+    : processBodyWithHeadmatter(
+      List.slice(0, ind - 2, lines),
+      List.slice(ind + 1, List.length(lines), lines),
+    )
+}
+
+
+
+getLiterate = pipe(
+  String.lines,
+  Fn.ifElse(hasHeadMatter, processFileWithHeadmatter, processBody),
+)
+// getLiterate = processBody
+
+main = () => {
+  pipe(
+    IO.pTrace("INPUT"),
+    File.read,
+    map(getLiterate),
+    chain(File.write("./Example.main.mad")),
+    Wish.fulfill(
+      (e) => {
+        IO.pTrace("bad", e)
+        return {}
+      },
+      (x) => {
+        IO.pTrace("good", x)
+        return {}
+      },
+    ),
+  )("./Example.litmad")
+}
