@@ -1,13 +1,8 @@
 IO
 Just, Nothing : Maybe
-Just | Nothing : Maybe
-
-Just | Nothing :: Maybe
-  Just, Nothing :: Maybe
 
 Fn: Function
 Maybe :: Maybe
-Left | Right : Either
 ---
 type RGB a = Red(a) | Blue(a) | Green(a)
 ===

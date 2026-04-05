@@ -10,6 +10,8 @@ import { log } from "@/Log"
 
 
 
+concat = (a, b) => a ++ b
+
 HEAD_MATTER_MARK = "---"
 
 madlibJson = File.read("./madlib.json")
@@ -19,9 +21,23 @@ isMadmark = String.startsWith(HEAD_MATTER_MARK)
 
 hasHeadMatter = List.any(isHeadmark)
 hasMadmarker = List.any(isMadmark)
-
+/*
 processBody = pipe(
-  List.filter(String.startsWith("  ")),
+  map(
+    Fn.ifElse(
+      String.startsWith("  "),
+      (body) => String.unlines(["main = () => {", body, "}"]),
+      String.replace("^", "//"),
+    ),
+  ),
+  String.unlines,
+)
+*/
+
+
+// List.filter(String.startsWith("  ")),
+processBody = pipe(
+  map(Fn.when(Fn.complement(String.startsWith("  ")), concat(" // "))),
   String.unlines,
   (body) => String.unlines(["main = () => {", body, "}"]),
 )
@@ -42,7 +58,6 @@ findIndex = (fn, lx) => {
   return helper(false, 0, lx)
 }
 
-concat = (a, b) => a ++ b
 enquote = (a) => `"${String.trim(a)}"`
 
 brace = pipe(

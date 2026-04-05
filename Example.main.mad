@@ -1,21 +1,35 @@
 // This file was automatically created by mad-literate
 import IO from "IO"
 import { Just, Nothing } from "Maybe"
-import { Just , Nothing } from "Maybe"
-import type { Just , Nothing } from "Maybe"
-import type { Just, Nothing } from "Maybe"
 import Fn from "Function"
 import type { Maybe } from "Maybe"
-import { Left , Right } from "Either"
 
 
 
 
 main = () => {
+ // ===
+ // 
+ // # Mad Literate Syntax
+ // 
+ // It's basically Markdown but also the code ends up being used as the body of a runnable / Main function.
+ // 
   a = 100
+ // 
+ // 
+ // ## Headmatter
+ // 
+ // The Headmatter mark, three dashes in a row (`---`) is a magic delimiter which allows for automatic imports with minimal effort
+ // 
+ //  1. A line with a single value such as `IO` with no colon is implied to be: `IO: IO`
+ //  2. A line with a colon-delimited value, such as `Fn: Function` is compiled as `import Fn from "Function"`
+ // 
+ // This means that `Fn: Function` and the `IO` in this file above the headmatter mark allow us to do this:
   
   pipe(
     Fn.ifElse((x) => x % 2, Red, Blue),
     IO.pTrace("What color is 102?")
   )(102)
+ // 
+ // 
 }
