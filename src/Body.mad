@@ -36,6 +36,7 @@ export processBodyWithHeadmatter = (version, head, body) => {
   footer = banner
   return column([header, hat, processBody(body), footer, "\n"])
 }
+
 processFileWithHeadmatter :: String -> List String -> String
 export processFileWithHeadmatter = (version, lines) => {
   ind = findIndex(isHeadmark, lines)

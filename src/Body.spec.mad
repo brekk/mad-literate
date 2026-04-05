@@ -1,9 +1,16 @@
-import { caseN2, caseN3, report } from "Study"
+import { assertEquals, test } from "Test"
+
+import { caseN2, report } from "Study"
 
 import { processBody, processBodyWithHeadmatter, processFileWithHeadmatter } from "@/Body"
 
 
 
-report(processBody, "processBody", [#[[], ""]])
+test("check", () => assertEquals(true, true))
 
-// report(caseN2(processFileWithHeadmatter), "processFileWithHeadmatter", [#[#["1.2.3", []], ""]])
+// report(processBody, "processBody", [#[[], ""]])
+report(
+  processFileWithHeadmatter("1.2.3"),
+  "processFileWithHeadmatter",
+  [#[[], "main = () => {\n\n}"]],
+)
