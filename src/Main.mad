@@ -1,6 +1,9 @@
+import type { Either } from "Either"
+
 import Dict from "Dictionary"
 import { Left, Right } from "Either"
 import File from "File"
+import FilePath from "FilePath"
 import Fn from "Function"
 import IO from "IO"
 import List from "List"
@@ -54,11 +57,21 @@ import {
 
 
 definition = [
+  Flag("cwd", ["c"], ParseString, Unspecial),
   Flag("input", ["i"], ParseString, Unspecial),
   Flag("output", ["o"], ParseString, Unspecial),
   Flag("run", ["r"], ParseBoolean, Unspecial),
   Flag("help", ["h"], ParseBoolean, Exclusive),
 ]
+alias MargsConfig = {
+  cwd :: String,
+  help :: Boolean,
+  input :: String,
+  output :: String,
+  run :: Boolean,
+}
+
+// parseArgs :: Either (List ConcreteExpression) (Dictionary String ConcreteExpression)
 parseArgs = where {
   Left(raw) =>
     Left(raw)
@@ -82,8 +95,10 @@ parseArgs = where {
       output = getString("output")
       run = getBool("run")
       help = getBool("help")
-
-      return Right({ input, output, run, help })
+      cwd = getDef(".", "cwd")
+      out :: MargsConfig
+      out = { input, output, run, help, cwd }
+      return Right(out)
     }
 }
 
@@ -96,32 +111,45 @@ getLiterate = pipe(
   String.lines,
   Fn.ifElse(hasHeadMatter, processFileWithHeadmatter, processBody),
 )
+margsParser = pipe(
+  parser(definition),
+  parseArgs,
+)
 
-main = (args) => {
-  myCLI = pipe(
-    parser(definition),
-    parseArgs,
-  )
+main = (raw_args) => {
   pipe(
     chop(1),
     String.unwords,
-    myCLI,
+    margsParser,
     IO.pTrace("ARGS!"),
-  )(args)
-  pipe(
-    IO.pTrace("INPUT"),
-    File.read,
-    map(getLiterate),
-    chain(File.write("./Example.main.mad")),
-    Wish.fulfill(
-      (e) => {
-        IO.pTrace("bad", e)
-        return {}
-      },
-      (x) => {
-        IO.pTrace("good", x)
-        return {}
+    map(
+      (args) => {
+        cwd = args.cwd
+        locate = (i) => FilePath.joinPath([cwd, i])
+        return pipe(
+          .input,
+          locate,
+          File.read,
+          map(getLiterate),
+          chain(
+            pipe(
+              .output,
+              locate,
+              File.write,
+            )(args),
+          ),
+          Wish.fulfill(
+            (e) => {
+              IO.pTrace("bad", e)
+              return {}
+            },
+            (x) => {
+              IO.pTrace("good", x)
+              return {}
+            },
+          ),
+        )(args)
       },
     ),
-  )("./Example.litmad")
+  )(raw_args)
 }
