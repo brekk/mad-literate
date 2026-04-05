@@ -13,11 +13,12 @@ import { log } from "@/Log"
 concat = (a, b) => a ++ b
 
 HEAD_MATTER_MARK = "---"
+MAD_MARKER = "==="
 
 madlibJson = File.read("./madlib.json")
 
 isHeadmark = String.startsWith(HEAD_MATTER_MARK)
-isMadmark = String.startsWith(HEAD_MATTER_MARK)
+isMadmark = String.startsWith(MAD_MARKER)
 
 hasHeadMatter = List.any(isHeadmark)
 hasMadmarker = List.any(isMadmark)
@@ -34,14 +35,6 @@ processBody = pipe(
 )
 */
 
-
-// List.filter(String.startsWith("  ")),
-processBody = pipe(
-  map(Fn.when(Fn.complement(String.startsWith("  ")), concat(" // "))),
-  String.unlines,
-  (body) => String.unlines(["main = () => {", body, "}"]),
-)
-
 findIndex :: (a -> Boolean) -> List a -> Integer
 findIndex = (fn, lx) => {
   helper = (barf, ix, ly) => if (!barf) {
@@ -57,6 +50,40 @@ findIndex = (fn, lx) => {
   }
   return helper(false, 0, lx)
 }
+
+MAIN_START = "main = () => {"
+
+encomment = map(Fn.when(Fn.complement(String.startsWith("  ")), concat(" // ")))
+
+// List.filter(String.startsWith("  ")),
+// List.slice(cut, List.length(v)),
+processBody = (lines) => {
+  marked = hasMadmarker(lines)
+  return pipe(
+    Fn.ifElse(
+      () => marked,
+      pipe(
+        (v) => String.unlines([
+          pipe(
+            encomment,
+            map(Fn.when(Fn.equals(" // " ++ MAD_MARKER), Fn.always(MAIN_START))),
+            log.headmatter("marked!"),
+            String.unlines,
+            concat($, "\n}"),
+          )(v),
+        ]),
+      ),
+      pipe(
+        encomment,
+        log.headmatter("unmarked marked!"),
+        String.unlines,
+        (body) => String.unlines(["main = () => {", body, "}"]),
+      ),
+    ),
+  )(lines)
+}
+
+
 
 enquote = (a) => `"${String.trim(a)}"`
 
@@ -126,7 +153,7 @@ processFileWithHeadmatter = (lines) => {
     ? processBody(lines)
     : processBodyWithHeadmatter(
       List.slice(0, ind - 2, lines),
-      List.slice(ind + 1, List.length(lines), lines),
+      List.slice(ind, List.length(lines), lines),
     )
 }
 

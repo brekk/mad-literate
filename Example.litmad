@@ -4,7 +4,9 @@ Just, Nothing : Maybe
 Fn: Function
 Maybe :: Maybe
 ---
-type RGB a = Red(a) | Blue(a) | Green(a)
+
+  type RGB a = Red(a) | Blue(a) | Green(a)
+
 ===
 
 # Mad Literate Syntax
@@ -12,7 +14,7 @@ type RGB a = Red(a) | Blue(a) | Green(a)
 It's basically Markdown but also the code ends up being used as the body of a runnable / Main function.
 
   a = 100
-
+  b = 33
 
 ## Headmatter
 
@@ -23,8 +25,8 @@ The Headmatter mark, three dashes in a row (`---`) is a magic delimiter which al
 
 This means that `Fn: Function` and the `IO` in this file above the headmatter mark allow us to do this:
   
-  pipe(
-    Fn.ifElse((x) => x % 2, Red, Blue),
-    IO.pTrace("What color is 102?")
-  )(102)
+  map((i) => pipe(
+    Fn.ifElse((x) => x % 2 == 0, Red, Blue),
+    IO.pTrace(`What color is ${show(i)}?`)
+  )(i))([a, b])
 

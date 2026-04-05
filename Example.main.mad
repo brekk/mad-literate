@@ -7,15 +7,17 @@ import type { Maybe } from "Maybe"
 
 
 
+ // 
+  type RGB a = Red(a) | Blue(a) | Green(a)
+ // 
 main = () => {
- // ===
  // 
  // # Mad Literate Syntax
  // 
  // It's basically Markdown but also the code ends up being used as the body of a runnable / Main function.
  // 
   a = 100
- // 
+  b = 33
  // 
  // ## Headmatter
  // 
@@ -26,10 +28,10 @@ main = () => {
  // 
  // This means that `Fn: Function` and the `IO` in this file above the headmatter mark allow us to do this:
   
-  pipe(
-    Fn.ifElse((x) => x % 2, Red, Blue),
-    IO.pTrace("What color is 102?")
-  )(102)
+  map((i) => pipe(
+    Fn.ifElse((x) => x % 2 == 0, Red, Blue),
+    IO.pTrace(`What color is ${show(i)}?`)
+  )(i))([a, b])
  // 
  // 
 }
