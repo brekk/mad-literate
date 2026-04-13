@@ -1,0 +1,137 @@
+import type { Wish } from "Wish"
+
+import File from "File"
+import Path from "FilePath"
+import List from "List"
+import String from "String"
+import Wish from "Wish"
+
+
+
+// a virtual file represents:
+
+// - a sourcepath 
+// - a transformation pattern
+// - a rendering pattern
+
+type ConcreteFile meta
+  = ConcreteFile(
+    // source path
+    String,
+    // source string
+    String,
+    // the metadata record
+    meta,
+  )
+
+
+export ERRORS = {
+  INVALID_SOURCE: "File source was invalid",
+  INVALID_SHAPE: "Source did not match expected formatting",
+}
+export type KnownVFileErrorKind = InvalidSource | InvalidShape
+export type VFileError = StaticVFileError(KnownVFileErrorKind, String) | DynamicVFileError(String)
+
+export ErrorInvalidSource = StaticVFileError(InvalidSource, ERRORS.INVALID_SOURCE)
+export ErrorInvalidShape = StaticVFileError(InvalidShape, ERRORS.INVALID_SHAPE)
+
+
+// the eventual set of helpers will likely be more complicated
+alias Internal = String
+
+foundation :: (Internal -> a) -> String -> Wish VFileError (ConcreteFile a)
+export foundation = (consume, src) => pipe(
+  File.read,
+  Wish.mapRej((_) => ErrorInvalidSource),
+  map((body) => ConcreteFile(src, body, consume(body))),
+)(src)
+
+// the processor takes a source path string and produces a concrete file instance
+export alias Processor meta = String -> ConcreteFile meta
+
+// the renderer takes a concrete file and produces an output
+export alias Renderer meta = ConcreteFile meta -> String
+
+export type FileTemplate a
+  = FileTemplate(
+    // processor
+    Processor a,
+    // renderer
+    Renderer a,
+  )
+
+
+export type Validator a
+  = BodyValidator(a -> String -> Boolean)
+  | LineValidator(a -> Integer -> String -> Boolean)
+export type Transformer a
+  = BodyTransformer(a -> String -> String)
+  | LineTransformer(a -> Integer -> String -> String)
+
+
+export type Rule a = Rule(List (Validator a), List (Transformer a))
+
+export type VirtualFile a
+  = VFile(
+    // source
+    String,
+    // rules
+    List (Rule a),
+  )
+
+export bodyToNumberedLines = pipe(
+  String.lines,
+  List.mapWithIndex((x, i) => #[i, x]),
+)
+
+getBodyValidators :: List (Rule a) -> List (Validator a)
+export getBodyValidators = chain(
+  where {
+    Rule(vs, _) =>
+      List.filter(
+        where {
+          BodyValidator(_) =>
+            true
+
+          _ =>
+            false
+        },
+        vs,
+      )
+  },
+)
+composeBodyValidators = (meta, list, body) => List.reduce(
+  (pass, checkWrap) => pass
+      && where(checkWrap) {
+        BodyValidator(check) =>
+          check(meta, body)
+
+        _ =>
+          ???
+      },
+  true,
+  list,
+)
+
+import IO from "IO"
+
+
+
+vfile :: String -> List (Rule a) -> Wish VFileError (ConcreteFile (List #[Integer, String]))
+export vfile = (src, rules) => {
+  bodyChecker = pipe(
+    getBodyValidators,
+    composeBodyValidators({ meta: true }),
+  )(rules)
+  valid = bodyChecker("I am a body")
+  return if (valid) do {
+    base = foundation(
+      pipe(
+        bodyToNumberedLines,
+      ),
+    )(src)
+    return base
+  } else {
+    Wish.bad(ErrorInvalidShape)
+  }
+}

@@ -1,0 +1,50 @@
+import type {
+  FileTemplate,
+  Processor,
+  Renderer,
+  Rule,
+  Transformer,
+  Validator,
+  VirtualFile,
+} from "@/VFile"
+
+import IO from "IO"
+import List from "List"
+import String from "String"
+import Wish from "Wish"
+
+import VFile from "@/VFile"
+
+
+
+SOURCE = "./examples/Basics.litmad"
+/*
+ pipe(
+  lined,
+  Wish.fulfill((bad) => { IO.pTrace("bad", bad) }, (good) => { IO.pTrace("good", good) }),
+ )(SOURCE)
+*/
+fulfillment = (badText, goodText, wish) => Wish.fulfill(
+  (bad) => {
+    IO.pTrace(badText, bad)
+  },
+  (good) => {
+    IO.pTrace(goodText, good)
+  },
+  wish,
+)
+
+main = () => {
+  lined = VFile.foundation(
+    pipe(
+      String.lines,
+      List.mapWithIndex((x, i) => #[i, x]),
+    ),
+  )
+
+  pipe(
+    VFile.vfile(SOURCE, [VFile.Rule([VFile.BodyValidator((meta, body) => true)], [])]),
+    fulfillment("bad", "good"),
+  )
+  IO.pTrace("my vfile", myVFile)
+}
