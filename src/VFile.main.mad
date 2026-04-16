@@ -14,25 +14,13 @@ import String from "String"
 import Wish from "Wish"
 
 import VFile from "@/VFile"
+import { fillfull } from "@/Wish"
 
 
 
 SOURCE = "./examples/Basics.litmad"
-/*
- pipe(
-  lined,
-  Wish.fulfill((bad) => { IO.pTrace("bad", bad) }, (good) => { IO.pTrace("good", good) }),
- )(SOURCE)
-*/
-fulfillment = (badText, goodText, wish) => Wish.fulfill(
-  (bad) => {
-    IO.pTrace(badText, bad)
-  },
-  (good) => {
-    IO.pTrace(goodText, good)
-  },
-  wish,
-)
+
+
 
 main = () => {
   lined = VFile.foundation(
@@ -41,10 +29,7 @@ main = () => {
       List.mapWithIndex((x, i) => #[i, x]),
     ),
   )
-
-  pipe(
-    VFile.vfile(SOURCE, [VFile.Rule([VFile.BodyValidator((meta, body) => true)], [])]),
-    fulfillment("bad", "good"),
-  )
+  myVFile = VFile.vfile(SOURCE, [VFile.Rule([VFile.BodyValidator((meta, body) => true)], [])])
   IO.pTrace("my vfile", myVFile)
+  fillfull("Barf!", "Yay!", myVFile)
 }

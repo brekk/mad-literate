@@ -1,0 +1,14 @@
+import IO from "IO"
+import Wish from "Wish"
+
+
+
+export fillfull = (badMsg, goodMsg, wish) => Wish.fulfill(
+  (bad) => {
+    IO.pTrace(badMsg, bad)
+  },
+  (good) => {
+    IO.pTrace(goodMsg, good)
+  },
+  wish,
+)

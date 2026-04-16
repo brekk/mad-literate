@@ -117,7 +117,7 @@ import IO from "IO"
 
 
 
-vfile :: String -> List (Rule a) -> Wish VFileError (ConcreteFile (List #[Integer, String]))
+// vfile :: String -> List (Rule a) -> Wish VFileError (ConcreteFile (List #[Integer, String]))
 export vfile = (src, rules) => {
   bodyChecker = pipe(
     getBodyValidators,
