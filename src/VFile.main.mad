@@ -1,10 +1,7 @@
 import type {
-  FileTemplate,
-  Processor,
-  Renderer,
   Rule,
-  Transformer,
-  Validator,
+  // Transformer,
+  // Validator,
   VirtualFile,
 } from "@/VFile"
 
@@ -31,7 +28,7 @@ main = () => {
   )
   myVFile = VFile.vfileWithState(
     SOURCE,
-    [VFile.Rule([VFile.BodyValidator((meta, body) => true)], [])],
+    [VFile.BodyRule("smoke", [VFile.BodyValidator((meta, body) => true)], [])],
     { hasHeadmarker: false, hasMadmarker: false },
   )
   fillfull("Barf!", "Yay!", myVFile)

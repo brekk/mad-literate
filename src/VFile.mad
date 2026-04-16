@@ -1,9 +1,11 @@
+import type { Either } from "Either"
 import type { Wish } from "Wish"
 
 import { Left, Right } from "Either"
 import File from "File"
 import Path from "FilePath"
 import Fn from "Function"
+import IO from "IO"
 import List from "List"
 import String from "String"
 import Wish from "Wish"
@@ -63,19 +65,33 @@ export type FileTemplate a
   )
 
 
-export type Validator a
-  = BodyValidator(a -> String -> Boolean)
-  | LineValidator(a -> Integer -> String -> Boolean)
+export type BodyValidator a = BodyValidator(a -> String -> Boolean)
+export type LineValidator a = LineValidator(a -> Integer -> String -> Boolean)
+export type BodyTransformer a = BodyTransformer(a -> String -> String)
+export type LineTransformer a = LineTransformer(a -> Integer -> String -> String)
 
-export type Transformer a
-  = BodyTransformer(a -> String -> String)
-  | LineTransformer(a -> Integer -> String -> String)
+
 
 // a rule consists of validations
 // and transformers
 // either can apply to the raw body
 // or line by line
-export type Rule a = Rule(List (Validator a), List (Transformer a))
+// export type Rule a = Rule(List (Validator a), List (Transformer a))
+
+alias Id = String
+
+export type Rule a
+  = BodyRule(Id, List (BodyValidator a), List (BodyTransformer a))
+  | LineRule(Id, List (LineValidator a), List (LineTransformer a))
+
+export isBodyRule = where {
+  BodyRule(_, _, _) =>
+    true
+
+  _ =>
+    false
+}
+export isLineRule = Fn.complement(isBodyRule)
 
 export type VirtualFile a
   = VFile(
@@ -90,120 +106,97 @@ export bodyToNumberedLines = pipe(
   List.mapWithIndex((x, i) => #[i, x]),
 )
 
-isBodyValidator = where {
-  BodyValidator(_) =>
-    true
-
-  _ =>
-    false
-}
-
-export isLineValidator = Fn.complement(isBodyValidator)
-
-getBodyValidators :: List (Rule a) -> List (Validator a)
-export getBodyValidators = chain(where { Rule(vs, _) => List.filter(isBodyValidator, vs) })
-
-getLineValidators :: List (Rule a) -> List (Validator a)
-export getLineValidators = chain(where { Rule(vs, _) => List.filter(isLineValidator, vs) })
-
-
-composeBodyValidators = (state, list, body) => List.reduce(
-  (pass, checkWrap) => pass
-      && where(checkWrap) {
-        BodyValidator(check) =>
-          check(state, body)
-
-        _ =>
-          // we can get away with this because we have a validity check upstream
-          ???
-      },
-  true,
-  list,
-)
-
-import IO from "IO"
 
 
 
-validateLine :: a -> Validator a -> Integer -> String -> Boolean
+
+
+validateLine :: a -> LineValidator a -> Integer -> String -> Boolean
 validateLine = (meta, check, lineNum, currentLine) => where(check) {
-  BodyValidator(_) =>
-    false
-
   LineValidator(runner) =>
     runner(meta, lineNum, currentLine)
 }
 
-transformLine :: a -> Transformer a -> Integer -> String -> String
+transformLine :: a -> LineTransformer a -> Integer -> String -> String
 transformLine = (meta, run, lineNum, currentLine) => where(run) {
-  BodyTransformer(_) =>
-    currentLine
-
   LineTransformer(runner) =>
     runner(meta, lineNum, currentLine)
 }
 
-import type { Either } from "Either"
 
 
 
 type FailurePoint = FailurePoint(Integer, String, String)
 
-processRulesByLine :: a -> List (Rule a) -> Integer -> String -> Either FailurePoint a
-processRulesByLine = (state, rules, lineNum, currentLine) => {
-  inner = (done, subrules, current) => if (done) {
-    Right(current)
-  } else {
-    where(subrules) {
-      [] =>
-        inner(true, [], current)
+recursivelyProcessRules = (done, lineNum, line, rules, state) => if (
+  done
+    || pipe(
+      List.filter(isLineRule),
+      List.length,
+      Fn.equals(0),
+    )(rules)
+) {
+  Right(#[lineNum, line])
+} else {
+  where(rules) {
+    [] =>
+      recursivelyProcessRules(done, lineNum, line, [], state)
 
-      [rule, ...z] =>
-        where(rule) {
-          Rule(validators, transformers) =>
-            do {
-              lineValidators = List.filter(isLineValidator, validators)
-              linesValid = List.all(validateLine(current, $, lineNum, currentLine))
+    [rule, ...z] =>
+      where(rule) {
+        BodyRule(id, _, _) =>
+          // skip body rules, they get processed upstream
+          recursivelyProcessRules(done, lineNum, line, z, state)
 
-              return inner(done, z, current)
-            }
-        }
-    }
+        LineRule(id, validators, transformers) =>
+          do {
+            lineValid = List.all(validateLine(state, $, lineNum, line), validators)
+            // next we should actually apply a transform
+            return recursivelyProcessRules(lineValid, lineNum, line, z, state)
+          }
+      }
   }
-  return inner(false, rules, state)
 }
 
+processRulesByLine = (rules, state, lineTuple) => where(lineTuple) {
+  #[lineNum, line] =>
+    IO.pTrace(
+      "processing " ++ show(lineNum) ++ ":",
+      recursivelyProcessRules(false, lineNum, line, rules, state),
+    )
+}
 
-/*
-vfileWithState :: String
-  -> List (Rule a)
-  -> a
-  -> Wish VFileError (ConcreteFile (List #[Integer, String]))
-*/
+extractValidation = where {
+  BodyValidator(fn) =>
+    fn
+}
+
+bodyChecker :: a -> List (Rule a) -> String -> Boolean
+bodyChecker = (state, rules, body) => List.all(
+  where {
+    BodyRule(_, vals, _) =>
+      pipe(
+        map(extractValidation),
+        List.reduce((pass, checkWrap) => pass && checkWrap(state, body), true),
+      )(vals)
+
+    _ =>
+      false
+  },
+)(rules)
+
 export vfileWithState = (src, rules, state) => {
-  // using whatever the meta shape is, first we validate the body
-  bodyChecker = pipe(
-    getBodyValidators,
-    composeBodyValidators(state),
-  )(rules)
-  validBody = bodyChecker(src)
-  return if (validBody) do {
-    base = foundation(
+  validBody = bodyChecker(state, rules, src)
+  return if (validBody) {
+    foundation(
       pipe(
         bodyToNumberedLines,
         (numBody) => pipe(
-          List.reduce(
-            (currentState, lineTuple) => where(lineTuple) {
-              #[lineNum, line] =>
-                processRulesByLine(currentState, rules, lineNum, line)
-            },
-            state,
-          ),
+          List.reduce((agg, x) => List.append(processRulesByLine(rules, state, x), agg), []),
           (finalState) => #[numBody, finalState],
         )(numBody),
       ),
     )(src)
-    return base
   } else {
     Wish.bad(ErrorInvalidShape)
   }
