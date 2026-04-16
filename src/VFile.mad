@@ -1,7 +1,9 @@
 import type { Wish } from "Wish"
 
+import { Left, Right } from "Either"
 import File from "File"
 import Path from "FilePath"
+import Fn from "Function"
 import List from "List"
 import String from "String"
 import Wish from "Wish"
@@ -10,18 +12,18 @@ import Wish from "Wish"
 
 // a virtual file represents:
 
-// - a sourcepath 
-// - a transformation pattern
-// - a rendering pattern
+// - a file's path 
+// - a file's raw body
+// - a state which is produced by transforming path and the raw body
 
-type ConcreteFile meta
+type ConcreteFile state
   = ConcreteFile(
     // source path
     String,
     // source string
     String,
     // the metadata record
-    meta,
+    state,
   )
 
 
@@ -47,10 +49,10 @@ export foundation = (consume, src) => pipe(
 )(src)
 
 // the processor takes a source path string and produces a concrete file instance
-export alias Processor meta = String -> ConcreteFile meta
+export alias Processor state = String -> ConcreteFile state
 
 // the renderer takes a concrete file and produces an output
-export alias Renderer meta = ConcreteFile meta -> String
+export alias Renderer state = ConcreteFile state -> String
 
 export type FileTemplate a
   = FileTemplate(
@@ -64,11 +66,15 @@ export type FileTemplate a
 export type Validator a
   = BodyValidator(a -> String -> Boolean)
   | LineValidator(a -> Integer -> String -> Boolean)
+
 export type Transformer a
   = BodyTransformer(a -> String -> String)
   | LineTransformer(a -> Integer -> String -> String)
 
-
+// a rule consists of validations
+// and transformers
+// either can apply to the raw body
+// or line by line
 export type Rule a = Rule(List (Validator a), List (Transformer a))
 
 export type VirtualFile a
@@ -84,29 +90,31 @@ export bodyToNumberedLines = pipe(
   List.mapWithIndex((x, i) => #[i, x]),
 )
 
-getBodyValidators :: List (Rule a) -> List (Validator a)
-export getBodyValidators = chain(
-  where {
-    Rule(vs, _) =>
-      List.filter(
-        where {
-          BodyValidator(_) =>
-            true
+isBodyValidator = where {
+  BodyValidator(_) =>
+    true
 
-          _ =>
-            false
-        },
-        vs,
-      )
-  },
-)
-composeBodyValidators = (meta, list, body) => List.reduce(
+  _ =>
+    false
+}
+
+export isLineValidator = Fn.complement(isBodyValidator)
+
+getBodyValidators :: List (Rule a) -> List (Validator a)
+export getBodyValidators = chain(where { Rule(vs, _) => List.filter(isBodyValidator, vs) })
+
+getLineValidators :: List (Rule a) -> List (Validator a)
+export getLineValidators = chain(where { Rule(vs, _) => List.filter(isLineValidator, vs) })
+
+
+composeBodyValidators = (state, list, body) => List.reduce(
   (pass, checkWrap) => pass
       && where(checkWrap) {
         BodyValidator(check) =>
-          check(meta, body)
+          check(state, body)
 
         _ =>
+          // we can get away with this because we have a validity check upstream
           ???
       },
   true,
@@ -117,17 +125,82 @@ import IO from "IO"
 
 
 
-// vfile :: String -> List (Rule a) -> Wish VFileError (ConcreteFile (List #[Integer, String]))
-export vfile = (src, rules) => {
+validateLine :: a -> Validator a -> Integer -> String -> Boolean
+validateLine = (meta, check, lineNum, currentLine) => where(check) {
+  BodyValidator(_) =>
+    false
+
+  LineValidator(runner) =>
+    runner(meta, lineNum, currentLine)
+}
+
+transformLine :: a -> Transformer a -> Integer -> String -> String
+transformLine = (meta, run, lineNum, currentLine) => where(run) {
+  BodyTransformer(_) =>
+    currentLine
+
+  LineTransformer(runner) =>
+    runner(meta, lineNum, currentLine)
+}
+
+import type { Either } from "Either"
+
+
+
+type FailurePoint = FailurePoint(Integer, String, String)
+
+processRulesByLine :: a -> List (Rule a) -> Integer -> String -> Either FailurePoint a
+processRulesByLine = (state, rules, lineNum, currentLine) => {
+  inner = (done, subrules, current) => if (done) {
+    Right(current)
+  } else {
+    where(subrules) {
+      [] =>
+        inner(true, [], current)
+
+      [rule, ...z] =>
+        where(rule) {
+          Rule(validators, transformers) =>
+            do {
+              lineValidators = List.filter(isLineValidator, validators)
+              linesValid = List.all(validateLine(current, $, lineNum, currentLine))
+
+              return inner(done, z, current)
+            }
+        }
+    }
+  }
+  return inner(false, rules, state)
+}
+
+
+/*
+vfileWithState :: String
+  -> List (Rule a)
+  -> a
+  -> Wish VFileError (ConcreteFile (List #[Integer, String]))
+*/
+export vfileWithState = (src, rules, state) => {
+  // using whatever the meta shape is, first we validate the body
   bodyChecker = pipe(
     getBodyValidators,
-    composeBodyValidators({ meta: true }),
+    composeBodyValidators(state),
   )(rules)
-  valid = bodyChecker("I am a body")
-  return if (valid) do {
+  validBody = bodyChecker(src)
+  return if (validBody) do {
     base = foundation(
       pipe(
         bodyToNumberedLines,
+        (numBody) => pipe(
+          List.reduce(
+            (currentState, lineTuple) => where(lineTuple) {
+              #[lineNum, line] =>
+                processRulesByLine(currentState, rules, lineNum, line)
+            },
+            state,
+          ),
+          (finalState) => #[numBody, finalState],
+        )(numBody),
       ),
     )(src)
     return base

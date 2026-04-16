@@ -29,7 +29,10 @@ main = () => {
       List.mapWithIndex((x, i) => #[i, x]),
     ),
   )
-  myVFile = VFile.vfile(SOURCE, [VFile.Rule([VFile.BodyValidator((meta, body) => true)], [])])
-  IO.pTrace("my vfile", myVFile)
+  myVFile = VFile.vfileWithState(
+    SOURCE,
+    [VFile.Rule([VFile.BodyValidator((meta, body) => true)], [])],
+    { hasHeadmarker: false, hasMadmarker: false },
+  )
   fillfull("Barf!", "Yay!", myVFile)
 }
