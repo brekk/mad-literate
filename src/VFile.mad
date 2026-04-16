@@ -46,7 +46,12 @@ alias Internal = String
 foundation :: (Internal -> a) -> String -> Wish VFileError (ConcreteFile a)
 export foundation = (consume, src) => pipe(
   File.read,
-  Wish.mapRej((_) => ErrorInvalidSource),
+  Wish.mapRej(
+    (rej) => {
+      IO.pTrace("UHUHUHU", rej)
+      return ErrorInvalidSource
+    },
+  ),
   map((body) => ConcreteFile(src, body, consume(body))),
 )(src)
 
@@ -193,7 +198,6 @@ export vfileWithState = (src, rules, state) => {
         bodyToNumberedLines,
         (numBody) => pipe(
           List.reduce((agg, x) => List.append(processRulesByLine(rules, state, x), agg), []),
-          (finalState) => #[numBody, finalState],
         )(numBody),
       ),
     )(src)
