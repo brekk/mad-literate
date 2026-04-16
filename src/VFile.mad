@@ -133,7 +133,7 @@ transformLine = (meta, run, lineNum, currentLine) => where(run) {
 
 type FailurePoint = FailurePoint(Integer, String, String)
 
-recursivelyProcessRules = (done, lineNum, line, rules, state) => if (
+recursivelyProcessRules = (valid, done, lineNum, line, rules, state) => if (
   done
     || pipe(
       List.filter(isLineRule),
@@ -141,23 +141,23 @@ recursivelyProcessRules = (done, lineNum, line, rules, state) => if (
       Fn.equals(0),
     )(rules)
 ) {
-  Right(#[lineNum, line])
+  (valid ? Right : Left)(#[lineNum, line])
 } else {
   where(rules) {
     [] =>
-      recursivelyProcessRules(done, lineNum, line, [], state)
+      recursivelyProcessRules(true, done, lineNum, line, [], state)
 
     [rule, ...z] =>
       where(rule) {
         BodyRule(id, _, _) =>
           // skip body rules, they get processed upstream
-          recursivelyProcessRules(done, lineNum, line, z, state)
+          recursivelyProcessRules(true, done, lineNum, line, z, state)
 
         LineRule(id, validators, transformers) =>
           do {
             lineValid = List.all(validateLine(state, $, lineNum, line), validators)
             // next we should actually apply a transform
-            return recursivelyProcessRules(lineValid, lineNum, line, z, state)
+            return recursivelyProcessRules(lineValid, done, lineNum, line, z, state)
           }
       }
   }
@@ -167,7 +167,7 @@ processRulesByLine = (rules, state, lineTuple) => where(lineTuple) {
   #[lineNum, line] =>
     IO.pTrace(
       "processing " ++ show(lineNum) ++ ":",
-      recursivelyProcessRules(false, lineNum, line, rules, state),
+      recursivelyProcessRules(true, false, lineNum, line, rules, state),
     )
 }
 
@@ -186,7 +186,7 @@ bodyChecker = (state, rules, body) => List.all(
       )(vals)
 
     _ =>
-      false
+      true
   },
 )(rules)
 

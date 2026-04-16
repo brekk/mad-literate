@@ -5,6 +5,7 @@ import type {
   VirtualFile,
 } from "@/VFile"
 
+import Fn from "Function"
 import IO from "IO"
 import List from "List"
 import String from "String"
@@ -30,11 +31,11 @@ main = () => {
     SOURCE,
     [
       VFile.BodyRule("smoke", [VFile.BodyValidator((meta, body) => true)], []),
-    // VFile.LineRule(
-    //   "ensure-headmarker",
-    //   [VFile.LineValidator((meta, lineNum, line) => String.startsWith("---", line))],
-    //   [],
-    // ),
+      VFile.LineRule(
+        "ensure-headmarker",
+        [VFile.LineValidator((meta, lineNum, line) => IO.pTrace("BARF!", !Fn.equals("---", line)))],
+        [],
+      ),
     ],
     { hasHeadmarker: false, hasMadmarker: false },
   )
