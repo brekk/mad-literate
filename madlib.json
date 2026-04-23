@@ -4,6 +4,11 @@
   "main": "src/Main.mad",
   "dependencies": [
     {
+      "url": "https://github.com/brekk/spirit-gum/archive/refs/tags/v0.0.1.zip",
+      "description": "spirit-gum",
+      "minVersion": "0.0.1"
+    },
+    {
       "url": "https://github.com/brekk/margs/archive/refs/tags/v0.0.3.zip",
       "description": "Margs",
       "minVersion": "0.0.3"
