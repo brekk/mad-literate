@@ -13,6 +13,7 @@ import List from "List"
 import { Just, Nothing } from "Maybe"
 import { fromMaybe } from "Maybe"
 import String from "String"
+import Tuple from "Tuple"
 import Wish from "Wish"
 
 import {
@@ -33,15 +34,7 @@ import {
 import SpiritGum from "spirit-gum"
 
 import { processBody, processFileWithHeadmatter } from "@/Body"
-import {
-  BAR,
-  COMMA,
-  COMMENT,
-  DOUBLE_COLON,
-  HEAD_MATTER_MARK,
-  MAD_MARKER,
-  MAIN_START,
-} from "@/Constants"
+import { BAR, COMMA, COMMENT, DOUBLE_COLON, HEAD_MARKER, MAD_MARKER, MAIN_START } from "@/Constants"
 import Headmatter from "@/Headmatter"
 import { chop } from "@/List"
 import { findIndex } from "@/List"
@@ -117,7 +110,7 @@ parseArgs = where {
 madlibJson = pipe(
   log.base("madlib.json"),
   File.read,
-  log.base("read from"),
+  map(log.base("read from")),
   // SpiritGum.VFile.forceVFileError,
   map(MadlibJson.parse),
 )("./madlib.json")
@@ -159,39 +152,124 @@ ender = Wish.fulfill(
   },
 )
 
+
+alias LiterateState = { headmarker :: Integer, madmarker :: Integer }
+
+STATE :: LiterateState
+STATE = { headmarker: -1, madmarker: -1 }
+
+lineheadmarker = SpiritGum
+  .Rule
+  .lineRule(
+    false,
+    "mad-literate/has-headmarker",
+    [],
+    [
+      SpiritGum
+        .Transformer
+        .ofLineState(
+          (meta, index, line) => (
+            {
+              ...meta,
+              headmarker: if (meta.headmarker < 0 && Fn.equals(HEAD_MARKER, line)) {
+                index
+              } else {
+                meta.headmarker
+              },
+            }
+          ),
+        ),
+    ],
+  )
+
 RULES = [
   SpiritGum
     .Rule
     .bodyRule(
       false,
-      "smoke-test",
+      "mad-literate/headmarker",
       [],
-      [SpiritGum.Transformer.ofBodyState((meta, _) => ({ ...meta, hasHeadmarker: true }))],
+      [
+        SpiritGum
+          .Transformer
+          .ofBodyState(
+            (meta, lines) => (
+              {
+                ...meta,
+                headmarker: pipe(
+                  List.find(
+                    pipe(
+                      Tuple.snd,
+                      Fn.equals(HEAD_MARKER),
+                    ),
+                  ),
+                  map(Tuple.fst),
+                  fromMaybe(-1),
+                )(lines),
+              }
+            ),
+          ),
+      ],
+    ),
+  SpiritGum
+    .Rule
+    .lineRule(
+      false,
+      "mad-literate/madmarker",
+      [],
+      [
+        SpiritGum
+          .Transformer
+          .ofBodyState(
+            (meta, lines) => (
+              {
+                ...meta,
+                madmarker: pipe(
+                  List.find(
+                    pipe(
+                      Tuple.snd,
+                      Fn.equals(MAD_MARKER),
+                    ),
+                  ),
+                  map(Tuple.fst),
+                  fromMaybe(-1),
+                )(lines),
+              }
+            ),
+          ),
+      ],
     ),
 ]
-alias LiterateState = { hasHeadmarker :: Boolean, hasMadmarker :: Boolean }
-
-STATE :: LiterateState
-STATE = { hasHeadmarker: false, hasMadmarker: false }
-
+/*
+chain(
+  pipe(
+    File.write(output),
+    // SpiritGum.VFile.forceVFileError,
+    map(Fn.always("Written!")),
+    Wish.mapRej(Fn.always("Unable to write!")),
+  ),
+),
+*/
 useSpiritGum :: String -> String -> String -> Wish String String
 useSpiritGum = (version, input, output) => pipe(
-  SpiritGum.VFile.fromPath($, RULES, STATE),
+  SpiritGum.VFile.fromPath(input, RULES),
   Wish.mapRej(Fn.always("Unable to process virtual file")),
   map(
-    SpiritGum
-      .Template
-      .renderWithConverter(map(SpiritGum.Line.render), (_, lines, _) => String.unlines(lines)),
-  ),
-  chain(
     pipe(
-      File.write(output),
-      // SpiritGum.VFile.forceVFileError,
-      map(Fn.always("Written!")),
-      Wish.mapRej(Fn.always("Unable to write!")),
+      log.cli("yes!"),
+      SpiritGum
+        .Template
+        .renderWithConverter(
+          map(SpiritGum.Line.render),
+          (_, lines, state) => {
+            log.cli("STATE", state)
+            return String.unlines(lines)
+          },
+        ),
     ),
   ),
-)(input)
+  map(log.cli("spirit-gum")),
+)(STATE)
 
 convert :: String -> List String -> Either String (Wish String String)
 convert = (version, raw) => pipe(
@@ -204,6 +282,7 @@ convert = (version, raw) => pipe(
       locate = relative(args.cwd)
       input = locate(args.input)
       output = locate(args.output)
+      log.base("...", #[input, output])
       // return readAndWriteToFile(version, input, output)
       return useSpiritGum(version, input, output)
     },
@@ -222,6 +301,7 @@ main = (rawargs) => {
   pipe(
     Wish.mapRej(Fn.always("BARF")),
     chain(map(consumer($, rawargs))),
+    map(log.cli("huh")),
     ender,
   )(madlibJson)
 }

@@ -2,7 +2,7 @@ import Fn from "Function"
 import List from "List"
 import String from "String"
 
-import { BAR, COMMA, COMMENT, DOUBLE_COLON, HEAD_MATTER_MARK, MAD_MARKER } from "@/Constants"
+import { BAR, COMMA, COMMENT, DOUBLE_COLON, HEAD_MARKER, MAD_MARKER } from "@/Constants"
 
 
 
@@ -27,7 +27,7 @@ export hasDoubleColon = String.contains(DOUBLE_COLON)
 
 export entype = concat("type ")
 
-export isHeadmark = String.startsWith(HEAD_MATTER_MARK)
+export isHeadmark = String.startsWith(HEAD_MARKER)
 export isMadmark = String.startsWith(MAD_MARKER)
 
 export hasHeadMatter = List.any(isHeadmark)

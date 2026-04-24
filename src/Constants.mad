@@ -1,6 +1,6 @@
 export MAIN_START = "main = () => {"
 
-export HEAD_MATTER_MARK = "---"
+export HEAD_MARKER = "---"
 export MAD_MARKER = "==="
 
 export COMMENT = "// "
