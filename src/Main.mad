@@ -1,6 +1,8 @@
 import type { Either } from "Either"
 import type { Parser } from "Json/Parse"
 
+import type { ConcreteFile, VFileError, WishCFile } from "spirit-gum"
+
 import Dict from "Dictionary"
 import Either from "Either"
 import File from "File"
@@ -28,6 +30,7 @@ import {
   parser,
   stringValue,
 } from "Margs"
+import SpiritGum from "spirit-gum"
 
 import { processBody, processFileWithHeadmatter } from "@/Body"
 import {
@@ -115,13 +118,14 @@ madlibJson = pipe(
   log.base("madlib.json"),
   File.read,
   log.base("read from"),
+  // SpiritGum.VFile.forceVFileError,
   map(MadlibJson.parse),
 )("./madlib.json")
 
-literati = (version, raw) => pipe(
-  String.lines,
-  Fn.ifElse(hasHeadMatter, processFileWithHeadmatter(version), processBody),
-)(raw)
+// literati = (version, raw) => pipe(
+//   String.lines,
+//   Fn.ifElse(hasHeadMatter, processFileWithHeadmatter(version), processBody),
+// )(raw)
 
 margsParser = pipe(
   parser(definition),
@@ -132,17 +136,17 @@ margsParser = pipe(
 relative = (cwd, i) => FilePath.joinPath([cwd, i])
 
 
-readAndWriteToFile :: String -> String -> String -> Wish String Boolean
-readAndWriteToFile = (version, input, output) => {
-  transform = pipe(
-    File.read,
-    map(literati(version)),
-    chain(File.write(output)),
-    map(Fn.always(true)),
-    Wish.mapRej(Fn.always("Unable to write to file: " ++ output)),
-  )
-  return transform(input)
-}
+// readAndWriteToFile :: String -> String -> String -> Wish String Boolean
+// readAndWriteToFile = (version, input, output) => {
+//   transform = pipe(
+//     File.read,
+//     map(literati(version)),
+//     chain(File.write(output)),
+//     map(Fn.always(true)),
+//     Wish.mapRej(Fn.always("Unable to write to file: " ++ output)),
+//   )
+//   return transform(input)
+// }
 
 ender = Wish.fulfill(
   (e) => {
@@ -150,12 +154,46 @@ ender = Wish.fulfill(
     return {}
   },
   (x) => {
-    IO.pTrace("Created new file from source:", x)
+    IO.pTrace("Created new file from source:", show(x))
     return {}
   },
 )
 
-convert :: String -> List String -> Either String (Wish a Boolean)
+RULES = [
+  SpiritGum
+    .Rule
+    .bodyRule(
+      false,
+      "smoke-test",
+      [],
+      [SpiritGum.Transformer.ofBodyState((meta, _) => ({ ...meta, hasHeadmarker: true }))],
+    ),
+]
+alias LiterateState = { hasHeadmarker :: Boolean, hasMadmarker :: Boolean }
+
+STATE :: LiterateState
+STATE = { hasHeadmarker: false, hasMadmarker: false }
+
+useSpiritGum :: String -> String -> String -> Wish String String
+useSpiritGum = (version, input, output) => pipe(
+  SpiritGum.VFile.fromPath($, RULES, STATE),
+  Wish.mapRej(Fn.always("Unable to process virtual file")),
+  map(
+    SpiritGum
+      .Template
+      .renderWithConverter(map(SpiritGum.Line.render), (_, lines, _) => String.unlines(lines)),
+  ),
+  chain(
+    pipe(
+      File.write(output),
+      // SpiritGum.VFile.forceVFileError,
+      map(Fn.always("Written!")),
+      Wish.mapRej(Fn.always("Unable to write!")),
+    ),
+  ),
+)(input)
+
+convert :: String -> List String -> Either String (Wish String String)
 convert = (version, raw) => pipe(
   chop(1),
   String.unwords,
@@ -166,23 +204,24 @@ convert = (version, raw) => pipe(
       locate = relative(args.cwd)
       input = locate(args.input)
       output = locate(args.output)
-      return readAndWriteToFile(version, input, output)
+      // return readAndWriteToFile(version, input, output)
+      return useSpiritGum(version, input, output)
     },
   ),
 )(raw)
 
+consumer = (json, rawargs) => pipe(
+  convert(showVersion(json.version)),
+  map(SpiritGum.VFile.forceVFileError),
+  Either.fromRight(Wish.bad(SpiritGum.InvalidSource)),
+  ender,
+)(rawargs)
+
+
 main = (rawargs) => {
   pipe(
-    Wish.mapRej(Fn.always("Unable to read madlib.json file!")),
-    chain(
-      map(
-        (json) => pipe(
-          convert(showVersion(json.version)),
-          Either.fromRight(Wish.bad("Unable to transform the source file!")),
-          ender,
-        )(rawargs),
-      ),
-    ),
+    Wish.mapRej(Fn.always("BARF")),
+    chain(map(consumer($, rawargs))),
     ender,
   )(madlibJson)
 }
