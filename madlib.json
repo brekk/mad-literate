@@ -4,9 +4,9 @@
   "main": "src/Main.mad",
   "dependencies": [
     {
-      "url": "https://github.com/brekk/spirit-gum/archive/refs/tags/v0.0.5.zip",
+      "url": "https://github.com/brekk/spirit-gum/archive/refs/tags/v0.0.7.zip",
       "description": "spirit-gum",
-      "minVersion": "0.0.5"
+      "minVersion": "0.0.7"
     },
     {
       "url": "https://github.com/brekk/margs/archive/refs/tags/v0.0.3.zip",
@@ -19,14 +19,14 @@
       "minVersion": "0.0.6"
     },
     {
-      "url": "https://github.com/brekk/study/archive/refs/tags/v0.0.3.zip",
+      "url": "https://github.com/brekk/study/archive/refs/tags/v0.0.4.zip",
       "description": "Study",
-      "minVersion": "0.0.3"
+      "minVersion": "0.0.4"
     },
     {
-      "url": "https://github.com/brekk/party-bus/archive/refs/tags/v0.0.6.zip",
+      "url": "https://github.com/brekk/party-bus/archive/refs/tags/v0.0.8.zip",
       "description": "PartyBus",
-      "minVersion": "0.0.6"
+      "minVersion": "0.0.8"
     }
   ],
   "importAliases": {

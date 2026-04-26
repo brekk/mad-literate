@@ -147,112 +147,108 @@ ender = Wish.fulfill(
     return {}
   },
   (x) => {
-    IO.pTrace("Created new file from source:", show(x))
+    IO.pTrace("Created new file from source:", x)
     return {}
   },
 )
 
 
-alias LiterateState = { headmarker :: Integer, madmarker :: Integer }
+alias LiterateState = { headmarker :: Integer, imports :: String, madmarker :: Integer }
 
 STATE :: LiterateState
-STATE = { headmarker: -1, madmarker: -1 }
+STATE = { headmarker: -1, madmarker: -1, imports: String }
 
-lineheadmarker = SpiritGum
-  .Rule
-  .lineRule(
-    false,
-    "mad-literate/has-headmarker",
-    [],
-    [
-      SpiritGum
-        .Transformer
-        .ofLineState(
-          (meta, index, line) => (
-            {
-              ...meta,
-              headmarker: if (meta.headmarker < 0 && Fn.equals(HEAD_MARKER, line)) {
-                index
-              } else {
-                meta.headmarker
-              },
-            }
+findHeadmarker = SpiritGum
+  .Transformer
+  .ofBodyState(
+    (meta, lines) => (
+      {
+        ...meta,
+        headmarker: pipe(
+          List.find(
+            pipe(
+              Tuple.snd,
+              Fn.equals(HEAD_MARKER),
+            ),
           ),
-        ),
-    ],
+          map(Tuple.fst),
+          fromMaybe(-1),
+        )(lines),
+      }
+    ),
+  )
+
+processFauxImports = SpiritGum
+  .Transformer
+  .ofBodyRaw(
+    (meta, lines) => {
+      hasHeadmarker = meta.headmarker > -1
+      imports = (
+        hasHeadmarker
+          ? pipe(
+            List.slice(0, meta.headmarker - 1),
+            map(Tuple.snd),
+            Headmatter.processHead,
+          )(lines)
+          : meta.imports
+      )
+      return #[
+        { ...meta, imports },
+        // TODO: unclear whether this is something that we ought to do pre-emptively
+        // I am guessing we do not and we should do this as a post processing step
+        // but I wanna see how this plays (both to validate how SpiritGum works)
+        // and to see if this complicates the process for the madmarker rules
+        hasHeadmarker ? chop(meta.headmarker + 1, lines) : lines,
+      ]
+    },
+  )
+
+findMadmarker = SpiritGum
+  .Transformer
+  .ofBodyState(
+    (meta, lines) => (
+      {
+        ...meta,
+        madmarker: pipe(
+          List.find(
+            pipe(
+              Tuple.snd,
+              Fn.equals(MAD_MARKER),
+            ),
+          ),
+          map(Tuple.fst),
+          fromMaybe(-1),
+        )(lines),
+      }
+    ),
+  )
+
+INDENT = "  "
+
+processMadmarker = SpiritGum
+  .Transformer
+  .ofLine(
+    (meta, _, line) => {
+      hasMadmarker = meta.madmarker > -1
+      return hasMadmarker && line == MAD_MARKER ? INDENT ++ "export main = () => {" : line
+    },
   )
 
 RULES = [
   SpiritGum
     .Rule
-    .bodyRule(
-      false,
-      "mad-literate/headmarker",
-      [],
-      [
-        SpiritGum
-          .Transformer
-          .ofBodyState(
-            (meta, lines) => (
-              {
-                ...meta,
-                headmarker: pipe(
-                  List.find(
-                    pipe(
-                      Tuple.snd,
-                      Fn.equals(HEAD_MARKER),
-                    ),
-                  ),
-                  map(Tuple.fst),
-                  fromMaybe(-1),
-                )(lines),
-              }
-            ),
-          ),
-      ],
-    ),
-  SpiritGum
-    .Rule
-    .lineRule(
-      false,
-      "mad-literate/madmarker",
-      [],
-      [
-        SpiritGum
-          .Transformer
-          .ofBodyState(
-            (meta, lines) => (
-              {
-                ...meta,
-                madmarker: pipe(
-                  List.find(
-                    pipe(
-                      Tuple.snd,
-                      Fn.equals(MAD_MARKER),
-                    ),
-                  ),
-                  map(Tuple.fst),
-                  fromMaybe(-1),
-                )(lines),
-              }
-            ),
-          ),
-      ],
-    ),
+    .bodyRule(false, "mad-literate/headmarker", [], [findHeadmarker, processFauxImports]),
+  SpiritGum.Rule.bodyRule(false, "mad-literate/madmarker/body", [], [findMadmarker]),
+  SpiritGum.Rule.lineRule(false, "mad-literate/madmarker/line", [], [processMadmarker]),
 ]
+
+
 /*
-chain(
-  pipe(
-    File.write(output),
-    // SpiritGum.VFile.forceVFileError,
-    map(Fn.always("Written!")),
-    Wish.mapRej(Fn.always("Unable to write!")),
-  ),
-),
+
 */
 useSpiritGum :: String -> String -> String -> Wish String String
 useSpiritGum = (version, input, output) => pipe(
-  SpiritGum.VFile.fromPath(input, RULES),
+  SpiritGum.VFile.fromPath(input, log.cli("hey!", RULES)),
   Wish.mapRej(Fn.always("Unable to process virtual file")),
   map(
     pipe(
@@ -260,15 +256,30 @@ useSpiritGum = (version, input, output) => pipe(
       SpiritGum
         .Template
         .renderWithConverter(
-          map(SpiritGum.Line.render),
+          map(
+            pipe(
+              SpiritGum.Line.safeRender,
+              map(Fn.unless(String.startsWith(INDENT), mappend("// "))),
+              fromMaybe(""),
+            ),
+          ),
           (_, lines, state) => {
             log.cli("STATE", state)
-            return String.unlines(lines)
+            out = String.unlines(lines)
+            return state.imports ++ "\n\n\n" ++ (state.madmarker > -1 ? out ++ "\n}" : out)
           },
         ),
     ),
   ),
   map(log.cli("spirit-gum")),
+  chain(
+    pipe(
+      File.write(output),
+      // SpiritGum.VFile.forceVFileError,
+      map(Fn.always("Written!")),
+      Wish.mapRej(Fn.always("Unable to write!")),
+    ),
+  ),
 )(STATE)
 
 convert :: String -> List String -> Either String (Wish String String)
