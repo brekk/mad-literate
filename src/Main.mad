@@ -1,7 +1,4 @@
 import type { Either } from "Either"
-import type { Parser } from "Json/Parse"
-
-import type { ConcreteFile, VFileError, WishCFile } from "spirit-gum"
 
 import Dict from "Dictionary"
 import Either from "Either"
@@ -10,48 +7,25 @@ import FilePath from "FilePath"
 import Fn from "Function"
 import IO from "IO"
 import List from "List"
-import { Just, Nothing } from "Maybe"
 import { fromMaybe } from "Maybe"
 import String from "String"
 import Tuple from "Tuple"
 import Wish from "Wish"
 
-import {
-  ConcreteBooleanFlag,
-  ConcreteFloatFlag,
-  ConcreteIntegerFlag,
-  ConcreteStringFlag,
-  Exclusive,
-  Flag,
-  Garbage,
-  InvalidFlag,
-  ParseBoolean,
-  ParseString,
-  Unspecial,
-  parser,
-  stringValue,
-} from "Margs"
-import SpiritGum from "spirit-gum"
+import { Exclusive, Flag, ParseBoolean, ParseString, Unspecial, parser, stringValue } from "Margs"
+import SpiritGumErrors from "spirit-gum/Errors"
+import Line from "spirit-gum/Line"
+import Rule from "spirit-gum/Rule"
+import Transformer from "spirit-gum/Rule/Transformer"
+import Template from "spirit-gum/Template"
+import VFile from "spirit-gum/VFile"
 
-import { processBody, processFileWithHeadmatter } from "@/Body"
 import { BAR, COMMA, COMMENT, DOUBLE_COLON, HEAD_MARKER, MAD_MARKER, MAIN_START } from "@/Constants"
 import Headmatter from "@/Headmatter"
 import { chop } from "@/List"
-import { findIndex } from "@/List"
 import { log } from "@/Log"
 import MadlibJson from "@/MadlibJson/MadlibDotJson"
 import { showVersion } from "@/MadlibJson/Version"
-import {
-  brace,
-  concat,
-  encomment,
-  enquote,
-  entype,
-  hasBar,
-  hasComma,
-  hasDoubleColon,
-  hasHeadMatter,
-} from "@/String"
 
 
 
@@ -69,12 +43,6 @@ alias MargsConfig = {
   output :: String,
   run :: Boolean,
 }
-// type MargsConfigParsed = MargsConfigParsed(MargsConfig)
-
-// parser :: Json.Parser MargsConfigParsed
-// parser = Json.map5((cwd, help, input, output, run) => 
-
-// parseArgs :: Either (List ConcreteExpression) (Dictionary String ConcreteExpression)
 parseArgs = where {
   Either.Left(raw) =>
     Either.Left(raw)
@@ -110,15 +78,13 @@ parseArgs = where {
 madlibJson = pipe(
   log.base("madlib.json"),
   File.read,
-  map(log.base("read from")),
-  // SpiritGum.VFile.forceVFileError,
-  map(MadlibJson.parse),
+  map(
+    pipe(
+      log.base("read from"),
+      MadlibJson.parse,
+    ),
+  ),
 )("./madlib.json")
-
-// literati = (version, raw) => pipe(
-//   String.lines,
-//   Fn.ifElse(hasHeadMatter, processFileWithHeadmatter(version), processBody),
-// )(raw)
 
 margsParser = pipe(
   parser(definition),
@@ -128,18 +94,6 @@ margsParser = pipe(
 
 relative = (cwd, i) => FilePath.joinPath([cwd, i])
 
-
-// readAndWriteToFile :: String -> String -> String -> Wish String Boolean
-// readAndWriteToFile = (version, input, output) => {
-//   transform = pipe(
-//     File.read,
-//     map(literati(version)),
-//     chain(File.write(output)),
-//     map(Fn.always(true)),
-//     Wish.mapRej(Fn.always("Unable to write to file: " ++ output)),
-//   )
-//   return transform(input)
-// }
 
 ender = Wish.fulfill(
   (e) => {
@@ -158,88 +112,78 @@ alias LiterateState = { headmarker :: Integer, imports :: String, madmarker :: I
 STATE :: LiterateState
 STATE = { headmarker: -1, madmarker: -1, imports: String }
 
-findHeadmarker = SpiritGum
-  .Transformer
-  .ofBodyState(
-    (meta, lines) => (
-      {
-        ...meta,
-        headmarker: pipe(
-          List.find(
-            pipe(
-              Tuple.snd,
-              Fn.equals(HEAD_MARKER),
-            ),
+findHeadmarker = Transformer.ofBodyState(
+  (meta, lines) => (
+    {
+      ...meta,
+      headmarker: pipe(
+        List.find(
+          pipe(
+            Tuple.snd,
+            Fn.equals(HEAD_MARKER),
           ),
-          map(Tuple.fst),
-          fromMaybe(-1),
-        )(lines),
-      }
-    ),
-  )
+        ),
+        map(Tuple.fst),
+        fromMaybe(-1),
+      )(lines),
+    }
+  ),
+)
 
-processFauxImports = SpiritGum
-  .Transformer
-  .ofBodyRaw(
-    (meta, lines) => {
-      hasHeadmarker = meta.headmarker > -1
-      imports = (
-        hasHeadmarker
-          ? pipe(
-            List.slice(0, meta.headmarker - 1),
-            map(Tuple.snd),
-            Headmatter.processHead,
-          )(lines)
-          : meta.imports
-      )
-      return #[
-        { ...meta, imports },
-        // TODO: unclear whether this is something that we ought to do pre-emptively
-        // I am guessing we do not and we should do this as a post processing step
-        // but I wanna see how this plays (both to validate how SpiritGum works)
-        // and to see if this complicates the process for the madmarker rules
-        hasHeadmarker ? chop(meta.headmarker + 1, lines) : lines,
-      ]
-    },
-  )
+processFauxImports = Transformer.ofBodyRaw(
+  (meta, lines) => {
+    hasHeadmarker = meta.headmarker > -1
+    imports = (
+      hasHeadmarker
+        ? pipe(
+          List.slice(0, meta.headmarker - 1),
+          map(Tuple.snd),
+          Headmatter.processHead,
+        )(lines)
+        : meta.imports
+    )
+    return #[
+      { ...meta, imports },
+      // TODO: unclear whether this is something that we ought to do pre-emptively
+      // I am guessing we do not and we should do this as a post processing step
+      // but I wanna see how this plays (both to validate how SpiritGum works)
+      // and to see if this complicates the process for the madmarker rules
+      hasHeadmarker ? chop(meta.headmarker + 1, lines) : lines,
+    ]
+  },
+)
 
-findMadmarker = SpiritGum
-  .Transformer
-  .ofBodyState(
-    (meta, lines) => (
-      {
-        ...meta,
-        madmarker: pipe(
-          List.find(
-            pipe(
-              Tuple.snd,
-              Fn.equals(MAD_MARKER),
-            ),
+findMadmarker = Transformer.ofBodyState(
+  (meta, lines) => (
+    {
+      ...meta,
+      madmarker: pipe(
+        List.find(
+          pipe(
+            Tuple.snd,
+            Fn.equals(MAD_MARKER),
           ),
-          map(Tuple.fst),
-          fromMaybe(-1),
-        )(lines),
-      }
-    ),
-  )
+        ),
+        map(Tuple.fst),
+        fromMaybe(-1),
+      )(lines),
+    }
+  ),
+)
 
 INDENT = "  "
 
-processMadmarker = SpiritGum
-  .Transformer
-  .ofLine(
-    (meta, _, line) => {
-      hasMadmarker = meta.madmarker > -1
-      return hasMadmarker && line == MAD_MARKER ? INDENT ++ "export main = () => {" : line
-    },
-  )
+processMadmarker = Transformer.ofLine(
+  (meta, _, line) => {
+    hasMadmarker = meta.madmarker > -1
+    return hasMadmarker && line == MAD_MARKER ? INDENT ++ "export main = () => {" : line
+  },
+)
 
 RULES = [
-  SpiritGum
-    .Rule
-    .bodyRule(false, "mad-literate/headmarker", [], [findHeadmarker, processFauxImports]),
-  SpiritGum.Rule.bodyRule(false, "mad-literate/madmarker/body", [], [findMadmarker]),
-  SpiritGum.Rule.lineRule(false, "mad-literate/madmarker/line", [], [processMadmarker]),
+  Rule.bodyRule(false, "mad-literate/headmarker", [], [findHeadmarker, processFauxImports]),
+  Rule.bodyRule(false, "mad-literate/madmarker/body", [], [findMadmarker]),
+  Rule.lineRule(false, "mad-literate/madmarker/line", [], [processMadmarker]),
 ]
 
 
@@ -248,34 +192,31 @@ RULES = [
 */
 useSpiritGum :: String -> String -> String -> Wish String String
 useSpiritGum = (version, input, output) => pipe(
-  SpiritGum.VFile.fromPath(input, log.cli("hey!", RULES)),
+  VFile.fromPath(input, log.cli("hey!", RULES)),
   Wish.mapRej(Fn.always("Unable to process virtual file")),
   map(
     pipe(
       log.cli("yes!"),
-      SpiritGum
-        .Template
-        .renderWithConverter(
-          map(
-            pipe(
-              SpiritGum.Line.safeRender,
-              map(Fn.unless(String.startsWith(INDENT), mappend("// "))),
-              fromMaybe(""),
-            ),
+      Template.renderWithConverter(
+        map(
+          pipe(
+            Line.safeRender,
+            map(Fn.unless(String.startsWith(INDENT), mappend("// "))),
+            fromMaybe(""),
           ),
-          (_, lines, state) => {
-            log.cli("STATE", state)
-            out = String.unlines(lines)
-            return state.imports ++ "\n\n\n" ++ (state.madmarker > -1 ? out ++ "\n}" : out)
-          },
         ),
+        (_, lines, state) => {
+          log.cli("STATE", state)
+          out = String.unlines(lines)
+          return state.imports ++ "\n\n\n" ++ (state.madmarker > -1 ? out ++ "\n}\n" : out)
+        },
+      ),
     ),
   ),
   map(log.cli("spirit-gum")),
   chain(
     pipe(
       File.write(output),
-      // SpiritGum.VFile.forceVFileError,
       map(Fn.always("Written!")),
       Wish.mapRej(Fn.always("Unable to write!")),
     ),
@@ -294,7 +235,6 @@ convert = (version, raw) => pipe(
       input = locate(args.input)
       output = locate(args.output)
       log.base("...", #[input, output])
-      // return readAndWriteToFile(version, input, output)
       return useSpiritGum(version, input, output)
     },
   ),
@@ -302,8 +242,8 @@ convert = (version, raw) => pipe(
 
 consumer = (json, rawargs) => pipe(
   convert(showVersion(json.version)),
-  map(SpiritGum.VFile.forceVFileError),
-  Either.fromRight(Wish.bad(SpiritGum.InvalidSource)),
+  map(VFile.forceVFileError),
+  Either.fromRight(Wish.bad(SpiritGumErrors.InvalidSource)),
   ender,
 )(rawargs)
 
@@ -316,3 +256,7 @@ main = (rawargs) => {
     ender,
   )(madlibJson)
 }
+
+// DEBUG="*" madlib run src/Main.mad -- -i ./Example.litmad -o ./Example.main.mad
+// && madlib format fix -i Example.main.mad
+// && madlib run Example.main.mad
