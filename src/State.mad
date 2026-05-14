@@ -1,0 +1,34 @@
+import type { Maybe } from "Maybe"
+
+import { Nothing } from "Maybe"
+
+
+
+export alias EnsignState = {
+  cwd :: Maybe String,
+  help :: Boolean,
+  input :: Maybe String,
+  madlibJson :: Maybe String,
+  output :: Maybe String,
+  runOnFinish :: Boolean,
+  useColor :: Boolean,
+}
+export alias SpiritGumState = {
+  ...EnsignState,
+  headmarker :: Integer,
+  imports :: String,
+  madmarker :: Integer,
+}
+INITIAL_STATE :: SpiritGumState
+export INITIAL_STATE = {
+  cwd: Nothing,
+  headmarker: -1,
+  help: false,
+  imports: "",
+  input: Nothing,
+  madlibJson: Nothing,
+  madmarker: -1,
+  output: Nothing,
+  runOnFinish: false,
+  useColor: true,
+}

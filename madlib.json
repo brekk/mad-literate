@@ -4,19 +4,19 @@
   "main": "src/Main.mad",
   "dependencies": [
     {
-      "url": "https://github.com/brekk/spirit-gum/archive/refs/tags/v0.1.0.zip",
+      "url": "https://github.com/brekk/spirit-gum/archive/refs/tags/v0.2.1.zip",
       "description": "spirit-gum",
+      "minVersion": "0.2.1"
+    },
+{
+      "url": "https://github.com/brekk/mad-at-json/archive/refs/tags/v0.0.2.zip",
+      "description": "mad-at-json",
+      "minVersion": "0.0.2"
+    },
+    {
+      "url": "https://github.com/brekk/ensign/archive/refs/tags/v0.1.0.zip",
+      "description": "ensign",
       "minVersion": "0.1.0"
-    },
-    {
-      "url": "https://github.com/brekk/margs/archive/refs/tags/v0.0.3.zip",
-      "description": "Margs",
-      "minVersion": "0.0.3"
-    },
-    {
-      "url": "https://github.com/madlib-lang/madmarkdown-parser/archive/refs/tags/v0.0.6.zip",
-      "description": "MarkdownParser",
-      "minVersion": "0.0.6"
     },
     {
       "url": "https://github.com/brekk/study/archive/refs/tags/v0.0.4.zip",

@@ -1,0 +1,7 @@
+import HeadContent from "@/Rule/HeadContent"
+import MainBody from "@/Rule/MainBody"
+import MainLine from "@/Rule/MainLine"
+
+
+
+export rules = [HeadContent.rule, MainBody.rule, MainLine.rule]

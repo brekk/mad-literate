@@ -1,0 +1,59 @@
+import Fn from "Function"
+import List from "List"
+import { fromMaybe } from "Maybe"
+import Tuple from "Tuple"
+
+import Rule from "spirit-gum/Rule"
+import Transformer from "spirit-gum/Rule/TransformerBody"
+
+import { HEAD_MARKER } from "@/Constants"
+import Headmatter from "@/Headmatter"
+import { chop } from "@/List"
+
+
+
+export _findHeadmarker = Transformer.ofBodyState(
+  (meta, lines) => (
+    {
+      ...meta,
+      headmarker: pipe(
+        List.find(
+          pipe(
+            Tuple.snd,
+            Fn.equals(HEAD_MARKER),
+          ),
+        ),
+        map(Tuple.fst),
+        fromMaybe(-1),
+      )(lines),
+    }
+  ),
+)
+export _processFauxImports = Transformer.ofBodyRaw(
+  (meta, lines) => {
+    hasHeadmarker = meta.headmarker > -1
+    imports = (
+      hasHeadmarker
+        ? pipe(
+          List.slice(0, meta.headmarker - 1),
+          map(Tuple.snd),
+          Headmatter.processHead,
+        )(lines)
+        : meta.imports
+    )
+    return #[
+      { ...meta, imports },
+      // TODO: unclear whether this is something that we ought to do pre-emptively
+      // I am guessing we do not and we should do this as a post processing step
+      // but I wanna see how this plays (both to validate how SpiritGum works)
+      // and to see if this complicates the process for the madmarker rules
+      hasHeadmarker ? chop(meta.headmarker + 1, lines) : lines,
+    ]
+  },
+)
+export rule = Rule.bodyRule(
+  false,
+  "mad-literate/headmarker",
+  [],
+  [_findHeadmarker, _processFauxImports],
+)

@@ -1,20 +1,38 @@
-import { env, tag, tagWithScope } from "PartyBus"
+/* ★★★ mad-literate@0.0.1 ★★★
+ * THIS FILE AUTOMATICALLY GENERATED FROM SOURCE: mad-literate.clowncar
+ */
+
+import Party from "PartyBus"
 
 
 
-LIT = "mad-literate"
-scoped = tagWithScope(LIT)
-
-export TAGS = {
-  base: tag(LIT),
-  headmatter: scoped(["headmatter"]),
-  body: scoped(["headmatter"]),
-  cli: scoped(["cli"]),
+export tags = {
+  madlit: Party.tag("madlit"),
+  rule: Party.tagWithScope("madlit", ["rule"]),
+  ruleHeadcontent: Party.tagWithScope("madlit", ["rule", "headcontent"]),
+  ruleMainBody: Party.tagWithScope("madlit", ["rule", "main", "body"]),
+  ruleMainLine: Party.tagWithScope("madlit", ["rule", "main", "line"]),
+  body: Party.tagWithScope("madlit", ["body"]),
+  cli: Party.tagWithScope("madlit", ["cli"]),
+  headmatter: Party.tagWithScope("madlit", ["headmatter"]),
 }
-
-export log = {
-  base: env(TAGS.base),
-  headmatter: env(TAGS.headmatter),
-  body: env(TAGS.body),
-  cli: env(TAGS.cli),
+export env = {
+  madlit: Party.env(tags.madlit),
+  rule: Party.env(tags.rule),
+  ruleHeadcontent: Party.env(tags.ruleHeadcontent),
+  ruleMainBody: Party.env(tags.ruleMainBody),
+  ruleMainLine: Party.env(tags.ruleMainLine),
+  body: Party.env(tags.body),
+  cli: Party.env(tags.cli),
+  headmatter: Party.env(tags.headmatter),
+}
+export tapped = {
+  madlit: Party.tap(env.madlit),
+  rule: Party.tap(env.rule),
+  ruleHeadcontent: Party.tap(env.ruleHeadcontent),
+  ruleMainBody: Party.tap(env.ruleMainBody),
+  ruleMainLine: Party.tap(env.ruleMainLine),
+  body: Party.tap(env.body),
+  cli: Party.tap(env.cli),
+  headmatter: Party.tap(env.headmatter),
 }

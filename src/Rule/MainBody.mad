@@ -1,0 +1,30 @@
+import Fn from "Function"
+import List from "List"
+import { fromMaybe } from "Maybe"
+import Tuple from "Tuple"
+
+import Rule from "spirit-gum/Rule"
+import Transformer from "spirit-gum/Rule/TransformerBody"
+
+import { MAD_MARKER } from "@/Constants"
+
+
+
+export _findMadmarker = Transformer.ofBodyState(
+  (meta, lines) => (
+    {
+      ...meta,
+      madmarker: pipe(
+        List.find(
+          pipe(
+            Tuple.snd,
+            Fn.equals(MAD_MARKER),
+          ),
+        ),
+        map(Tuple.fst),
+        fromMaybe(-1),
+      )(lines),
+    }
+  ),
+)
+export rule = Rule.bodyRule(false, "mad-literate/madmarker/body", [], [_findMadmarker])
