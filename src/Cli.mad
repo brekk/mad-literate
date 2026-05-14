@@ -180,7 +180,7 @@ main = (args) => {
           Wish.mapRej(Fn.always("Unable to read!")),
           chain(MadlibJson.parse),
           map(Log.env.cli("hey!")),
-          // works
+          // no worky
           map(
             Log
               .tapped
@@ -189,7 +189,7 @@ main = (args) => {
                 ({ name, version }) => name ++ "@" ++ Version.showVersion(version),
               ),
           ),
-          // no worky
+          // worky
           // map(
           //   (x) => {
           //     { name, version } = x
