@@ -5,7 +5,7 @@ import String from "String"
 import { COMMENT, MAD_MARKER, MAIN_START } from "@/Constants"
 import Headmatter from "@/Headmatter"
 import { findIndex } from "@/List"
-import { log } from "@/Log"
+import Log from "@/Log"
 import { concat, encommentAll, hasMadmarker, isHeadmark } from "@/String"
 
 
@@ -15,20 +15,18 @@ export processBody = Fn.ifElse(
   (v) => pipe(
     encommentAll,
     map(Fn.when(Fn.equals(COMMENT ++ MAD_MARKER), Fn.always(MAIN_START))),
-    log.headmatter("marked!"),
+    Log.env.headmatter("marked!"),
     String.unlines,
     concat($, "\n}"),
   )(v),
   pipe(
     encommentAll,
-    log.headmatter("unmarked marked!"),
+    Log.env.headmatter("unmarked marked!"),
     String.unlines,
     (body) => String.unlines(["main = () => {", body, "}"]),
   ),
 )
-
 column = String.join("\n\n")
-
 export processBodyWithHeadmatter = (version, head, body) => {
   hat = Headmatter.processHead(head)
   banner = "/* This file was automatically created by mad-literate@" ++ version ++ " */"
@@ -36,7 +34,6 @@ export processBodyWithHeadmatter = (version, head, body) => {
   footer = banner
   return column([header, hat, processBody(body), footer, "\n"])
 }
-
 processFileWithHeadmatter :: String -> List String -> String
 export processFileWithHeadmatter = (version, lines) => {
   ind = findIndex(isHeadmark, lines)

@@ -37,6 +37,7 @@ import Headmatter from "@/Headmatter"
 import { chop } from "@/List"
 import { env } from "@/Log"
 import { rules } from "@/Rules"
+import { INITIAL_STATE } from "@/State"
 
 
 
@@ -71,7 +72,7 @@ useSpiritGum = (version, input, output) => pipe(
       Wish.mapRej(Fn.always("Unable to write!")),
     ),
   ),
-)(STATE)
+)(INITIAL_STATE)
 relative = (cwd, i) => FilePath.joinPath([cwd, i])
 convertMargsToSpiritGum :: String -> List String -> Either String (Wish String String)
 convertMargsToSpiritGum = (version, raw) => pipe(

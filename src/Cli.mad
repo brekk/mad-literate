@@ -9,7 +9,9 @@ import FilePath from "FilePath"
 import Fn from "Function"
 import IO from "IO"
 import List from "List"
+import { fromMaybe } from "Maybe"
 import { Just, Nothing } from "Maybe"
+import String from "String"
 import Wish from "Wish"
 
 import Declared from "ensign/Declared"
@@ -18,7 +20,12 @@ import EPrint from "ensign/Declared/Print"
 import EFlags from "ensign/Flags"
 import MadlibJson from "mad-at-json/Parse/MadlibJson"
 import Version from "mad-at-json/Version"
+import Line from "spirit-gum/Line"
+import Template from "spirit-gum/Template"
+import VFile from "spirit-gum/VFile"
 
+import { COMMENT, INDENT } from "@/Constants"
+import { env } from "@/Log"
 import Log from "@/Log"
 import { rules } from "@/Rules"
 import { INITIAL_STATE } from "@/State"
@@ -148,10 +155,49 @@ helpful = lined($, HELP_ME)
 READING_IS_HARD = helpful(
   "Unable to process the given instructions. `--input`, `--output` are required.",
 )
+useSpiritGum :: String -> String -> String -> Wish String String
+useSpiritGum = (version, input, output) => pipe(
+  VFile.fromPath(input, env.cli("hey!", rules)),
+  Wish.mapRej(Fn.always("Unable to process virtual file")),
+  map(
+    pipe(
+      env.cli("yes!"),
+      Template.renderWithConverter(
+        map(
+          pipe(
+            Line.safeRender,
+            map(Fn.unless(String.startsWith(INDENT), mappend(COMMENT ++ " "))),
+            fromMaybe(""),
+          ),
+        ),
+        (_, lines, state) => {
+          env.cli("STATE", state)
+          out = String.unlines(lines)
+          return "/* mad-literate@"
+            ++ version
+            ++ " */\n/* generated from: "
+            ++ show(input)
+            ++ " */\n\n"
+            ++ state.imports
+            ++ "\n\n\n"
+            ++ (state.madmarker > -1 ? out ++ "\n}\n" : out)
+        },
+      ),
+    ),
+  ),
+  map(env.cli("spirit-gum")),
+  chain(
+    pipe(
+      File.write(output),
+      map(Fn.always("Written!")),
+      Wish.mapRej(Fn.always("Unable to write!")),
+    ),
+  ),
+)(INITIAL_STATE)
 applyMadlibJsonToState :: SpiritGumState -> MadlibDotJson -> Wish String String
-applyMadlibJsonToState = ({ input }, json) => where(input) {
-  Just(i) =>
-    Wish.good("READING IS FUN")
+applyMadlibJsonToState = ({ input, output }, json) => where(#[input, output]) {
+  #[Just(i), Just(o)] =>
+    useSpiritGum(Version.showVersion(json.version), i, o)
 
   _ =>
     Wish.bad(READING_IS_HARD)
@@ -180,7 +226,6 @@ main = (args) => {
           Wish.mapRej(Fn.always("Unable to read!")),
           chain(MadlibJson.parse),
           map(Log.env.cli("hey!")),
-          // no worky
           map(
             Log
               .tapped
@@ -189,14 +234,7 @@ main = (args) => {
                 ({ name, version }) => name ++ "@" ++ Version.showVersion(version),
               ),
           ),
-          // worky
-          // map(
-          //   (x) => {
-          //     { name, version } = x
-          //     Log.env.cli("Loaded madlib.json...", name ++ "@" ++ Version.showVersion(version))
-          //     return x
-          //   },
-          // ),
+          chain(applyMadlibJsonToState(state)),
         )(sourceJsonPath)
       }
     },
