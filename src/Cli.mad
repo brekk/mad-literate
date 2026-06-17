@@ -55,16 +55,6 @@ a useful and expressive syntax for writing Madlib files`
 LITERATI = "📗"
 BAD_LITERATI = "📕"
 relative = (cwd, i) => FilePath.joinPath([cwd, i])
-ender = Wish.fulfill(
-  (e) => {
-    IO.pTrace("bad", e)
-    return {}
-  },
-  (x) => {
-    IO.pTrace("Created new file from source:", x)
-    return {}
-  },
-)
 processFlagState :: SpiritGumState
   -> (SpiritGumState -> Flag -> #[Boolean, SpiritGumState])
   -> List Flag

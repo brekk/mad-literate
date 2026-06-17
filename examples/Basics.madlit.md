@@ -1,3 +1,4 @@
+---
 fromMaybe | Just | Nothing : Maybe
 Either :: Either
 Maybe :: Maybe
@@ -10,12 +11,12 @@ It has headmatter content which allows for dynamic imports.
 
 We can define some stuff here:
 
-  hundred = Just(100)
-  bad = Nothing
+    hundred = Just(100)
+    bad = Nothing
 
 And now let's do something with those imports:
 
-  pipe(
-    fromMaybe(33),
-    IO.pTrace("outputs!")
-  )(bad)
+    pipe(
+      fromMaybe(33),
+      IO.pTrace("outputs!")
+    )(bad)

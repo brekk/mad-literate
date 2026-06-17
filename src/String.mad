@@ -1,36 +1,80 @@
+import Compare from "Compare"
 import Fn from "Function"
 import List from "List"
+import { fromMaybe } from "Maybe"
 import String from "String"
+import { charAt, length } from "String"
 
 import { BAR, COMMA, COMMENT, DOUBLE_COLON, HEAD_MARKER, MAD_MARKER } from "@/Constants"
 
 
 
 export concat = (a, b) => a ++ b
-
 export encomment = Fn.when(Fn.complement(String.startsWith("  ")), concat(COMMENT))
 export encommentAll = map(encomment)
-
-
-
 export enquote = (a) => `"${String.trim(a)}"`
-
 export brace = pipe(
   concat("{ "),
   concat($, " }"),
 )
-
-
 export hasBar = String.includes(BAR)
 export hasComma = String.includes(COMMA)
 export hasDoubleColon = String.contains(DOUBLE_COLON)
-
 export entype = concat("type ")
-
 export isHeadmark = String.startsWith(HEAD_MARKER)
 export isMadmark = String.startsWith(MAD_MARKER)
-
 export hasHeadMatter = List.any(isHeadmark)
 export hasMadmarker = List.any(isMadmark)
-
 export chop = (x, str) => String.slice(x, String.length(str), str)
+export capitalize = Fn.when(
+  pipe(
+    String.length,
+    Compare.lt(0),
+  ),
+  (s) => pipe(
+      String.slice(0, 1),
+      String.toUpper,
+    )(s)
+      ++ String.slice(1, String.length(s), s),
+)
+export isCommented = String.startsWith("//")
+export isUncommented = Fn.complement(isCommented)
+indexOfAfter :: Integer -> Char -> String -> Integer
+export indexOfAfter = (h, ch, _str) => {
+  max = length(_str)
+  helper :: Integer -> Integer -> List Char -> Integer
+  helper = (matched, i, xs) => if (matched > -1 || i > max) {
+    matched
+  } else do {
+    j = i + 1
+    return where(xs) {
+      [] =>
+        matched
+
+      [a, ...z] =>
+        helper(a == ch ? i : matched, j, z)
+    }
+  }
+
+  return helper(-1, h, List.slice(h, String.length(_str), String.toList(_str)))
+}
+indexOfAfterWhile :: Integer -> Char -> String -> Integer
+export indexOfAfterWhile = (h, ch, str) => {
+  i = h
+  matched = -1
+  while(matched < 0 && i <= length(str)) do {
+    check = pipe(
+      charAt(i),
+      map(Fn.equals(ch)),
+      fromMaybe(false),
+    )(str)
+    if (check) do {
+      matched := i
+    } else do {
+      i := i + 1
+    }
+  }
+  return matched
+}
+indexOf :: Char -> String -> Integer
+export indexOf = indexOfAfter(0)

@@ -1,10 +1,12 @@
 import Fn from "Function"
 import List from "List"
 import { fromMaybe } from "Maybe"
+import String from "String"
 import Tuple from "Tuple"
 
 import Rule from "spirit-gum/Rule"
 import Transformer from "spirit-gum/Rule/TransformerBody"
+import { BodyValidator, LineValidator } from "spirit-gum/Rule/Validator"
 
 import { HEAD_MARKER } from "@/Constants"
 import Headmatter from "@/Headmatter"
@@ -51,9 +53,11 @@ export _processFauxImports = Transformer.ofBodyRaw(
     ]
   },
 )
+hasLeadHeadmark = BodyValidator((state, bod) => String.startsWith(HEAD_MARKER, bod))
+hasTailHeadmark = LineValidator((state, i, line) => i != 0 && line == HEAD_MARKER)
 export rule = Rule.bodyRule(
   false,
   "mad-literate/headmarker",
-  [],
+  [hasLeadHeadmark, hasTailHeadmark],
   [_findHeadmarker, _processFauxImports],
 )
