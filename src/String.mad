@@ -1,17 +1,37 @@
 import Compare from "Compare"
 import Fn from "Function"
+import IO from "IO"
 import List from "List"
 import { fromMaybe } from "Maybe"
 import String from "String"
 import { charAt, length } from "String"
 
-import { BAR, COMMA, COMMENT, DOUBLE_COLON, HEAD_MARKER, MAD_MARKER } from "@/Constants"
+import { BAR, COMMA, COMMENT, DOUBLE_COLON, HEAD_MARKER, INDENT, MAD_MARKER } from "@/Constants"
 
 
 
 export concat = (a, b) => a ++ b
 export encomment = Fn.when(Fn.complement(String.startsWith("  ")), concat(COMMENT))
-export encommentAll = map(encomment)
+// export encommentAll = map(encomment)
+export encommentAll = (lines) => {
+  commentChunks = (processed, commenting, current, remainingLines) => where(remainingLines) {
+    [] =>
+      processed
+
+    [a, ...z] =>
+      do {
+        nowCommenting = Fn.complement(String.startsWith(INDENT), a)
+        IO.pTrace("NOW COM", nowCommenting)
+        updatedCurrent = nowCommenting ? [...current, String.trim(a)] : current
+        nowProcessed = !nowCommenting && commenting
+          ? [...processed, "/*\n" ++ String.unlines(current) ++ "\n*/\n"]
+          : [...processed, a]
+        return commentChunks(nowProcessed, nowCommenting, updatedCurrent, z)
+      }
+  }
+  IO.pTrace("Pterodactyle", true)
+  return commentChunks([], false, [], lines)
+}
 export enquote = (a) => `"${String.trim(a)}"`
 export brace = pipe(
   concat("{ "),
@@ -39,6 +59,7 @@ export capitalize = Fn.when(
 )
 export isCommented = String.startsWith("//")
 export isUncommented = Fn.complement(isCommented)
+export uncomment = String.replace("//", "")
 indexOfAfter :: Integer -> Char -> String -> Integer
 export indexOfAfter = (h, ch, _str) => {
   max = length(_str)

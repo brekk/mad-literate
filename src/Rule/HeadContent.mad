@@ -10,26 +10,25 @@ import { BodyValidator, LineValidator } from "spirit-gum/Rule/Validator"
 
 import { HEAD_MARKER } from "@/Constants"
 import Headmatter from "@/Headmatter"
+import _List from "@/List"
 import { chop } from "@/List"
 
 
 
-export _findHeadmarker = Transformer.ofBodyState(
-  (meta, lines) => (
-    {
-      ...meta,
-      headmarker: pipe(
-        List.find(
-          pipe(
-            Tuple.snd,
-            Fn.equals(HEAD_MARKER),
-          ),
-        ),
-        map(Tuple.fst),
-        fromMaybe(-1),
-      )(lines),
-    }
+isHeadmark = Fn.equals(HEAD_MARKER)
+findTailHeadmark = pipe(
+  chop(1),
+  List.find(
+    pipe(
+      Tuple.snd,
+      isHeadmark,
+    ),
   ),
+  map(Tuple.fst),
+  fromMaybe(-1),
+)
+export _findHeadmarker = Transformer.ofBodyState(
+  (meta, lines) => ({ ...meta, headmarker: findTailHeadmark(lines) }),
 )
 export _processFauxImports = Transformer.ofBodyRaw(
   (meta, lines) => {
@@ -37,27 +36,27 @@ export _processFauxImports = Transformer.ofBodyRaw(
     imports = (
       hasHeadmarker
         ? pipe(
-          List.slice(0, meta.headmarker - 1),
+          List.slice(1, meta.headmarker - 1),
           map(Tuple.snd),
           Headmatter.processHead,
         )(lines)
         : meta.imports
     )
-    return #[
-      { ...meta, imports },
-      // TODO: unclear whether this is something that we ought to do pre-emptively
-      // I am guessing we do not and we should do this as a post processing step
-      // but I wanna see how this plays (both to validate how SpiritGum works)
-      // and to see if this complicates the process for the madmarker rules
-      hasHeadmarker ? chop(meta.headmarker + 1, lines) : lines,
-    ]
+    return #[{ ...meta, imports }, hasHeadmarker ? chop(meta.headmarker + 1, lines) : lines]
   },
 )
-hasLeadHeadmark = BodyValidator((state, bod) => String.startsWith(HEAD_MARKER, bod))
-hasTailHeadmark = LineValidator((state, i, line) => i != 0 && line == HEAD_MARKER)
+export hasExactlyTwoOrZeroHeadmarks = BodyValidator(
+  (_, b) => {
+    lines = String.lines(b)
+    first = _List.findIndex(isHeadmark, lines)
+    second = _List.findIndexAfter(first, isHeadmark, lines)
+    // both or neither
+    return first == 0 && second > 0 || first == -1 && second == -1
+  },
+)
 export rule = Rule.bodyRule(
   false,
   "mad-literate/headmarker",
-  [hasLeadHeadmark, hasTailHeadmark],
+  [hasExactlyTwoOrZeroHeadmarks],
   [_findHeadmarker, _processFauxImports],
 )

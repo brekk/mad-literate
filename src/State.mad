@@ -9,6 +9,7 @@ export alias EnsignState = {
   help :: Boolean,
   input :: Maybe String,
   madlibJson :: Maybe String,
+  multiLine :: Boolean,
   output :: Maybe String,
   runOnFinish :: Boolean,
   useColor :: Boolean,
@@ -31,4 +32,5 @@ export INITIAL_STATE = {
   output: Nothing,
   runOnFinish: false,
   useColor: true,
+  multiLine: false,
 }

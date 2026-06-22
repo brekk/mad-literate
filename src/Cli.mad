@@ -29,6 +29,7 @@ import { env } from "@/Log"
 import Log from "@/Log"
 import { rules } from "@/Rules"
 import { INITIAL_STATE } from "@/State"
+import _String from "@/String"
 
 
 
@@ -39,6 +40,11 @@ export FLAGS = [
   DFlag.flagBoolean("run", ["r"], "Run the file after conversion"),
   DFlag.flagString("cwd", ["c"], "Set the working path"),
   DFlag.flagBoolean("color", ["K"], "Render the things with color"),
+  DFlag.flagBoolean(
+    "multi-line",
+    ["L"],
+    "Render with multi-line comments rather than single line comments",
+  ),
   DFlag.flagString("madlib-json", ["madlib", "M"], "Set the path to `madlib.json`"),
   DFlag.flagBoolean(
     "collapse-comments",
@@ -102,6 +108,8 @@ captureTheFlag = (state, flag) => where(flag) {
       #[true, { ...state, help: v }]
     } else if (k == "color") {
       #[false, { ...state, useColor: v }]
+    } else if (k == "multi-line") {
+      #[false, { ...state, multiLine: v }]
     } else {
       #[false, state]
     }
@@ -145,24 +153,71 @@ helpful = lined($, HELP_ME)
 READING_IS_HARD = helpful(
   "Unable to process the given instructions. `--input`, `--output` are required.",
 )
-useSpiritGum :: String -> String -> String -> Wish String String
-useSpiritGum = (version, input, output) => pipe(
+renderSoloLine = pipe(
+  Line.safeRender,
+  map(Fn.unless(String.startsWith(INDENT), mappend(COMMENT ++ " "))),
+  fromMaybe(""),
+)
+processMultiLine = (lines) => {
+  commentChunks = (processed, commenting, current, remainingLines) => where(remainingLines) {
+    [] =>
+      processed
+
+    [a, ...z] =>
+      do {
+        nowCommenting = String.startsWith(COMMENT, a)
+        comfix = pipe(
+          Fn.when(String.startsWith(COMMENT), _String.uncomment),
+          String.trim,
+        )
+        updatedCurrent = nowCommenting ? [...current, comfix(a)] : current
+        nowProcessed = !nowCommenting && commenting
+          ? [...processed, "/*\n" ++ String.unlines(current) ++ "\n*/\n", nowCommenting ? "" : a]
+          : [...processed, a]
+        IO.pTrace("NOW COM", #[nowCommenting, a, nowProcessed])
+        return commentChunks(nowProcessed, nowCommenting, updatedCurrent, z)
+      }
+  }
+  IO.pTrace("Pterodactyle", true)
+  return pipe(
+    List.reject(
+      pipe(
+        _String.uncomment,
+        String.isEmpty,
+      ),
+    ),
+    commentChunks([], true, []),
+    String.unlines,
+  )(lines)
+}
+useSpiritGum :: Boolean -> String -> String -> String -> Wish String String
+useSpiritGum = (multiLine, version, input, output) => pipe(
   VFile.fromPath(input, env.cli("hey!", rules)),
   Wish.mapRej(Fn.always("Unable to process virtual file")),
   map(
     pipe(
       env.cli("yes!"),
       Template.renderWithConverter(
-        map(
-          pipe(
-            Line.safeRender,
-            map(Fn.unless(String.startsWith(INDENT), mappend(COMMENT ++ " "))),
-            fromMaybe(""),
-          ),
-        ),
+        // map(render1),
+        // map(multiLine ? Line.render : renderSoloLine),
+        map(renderSoloLine),
         (_, lines, state) => {
           env.cli("STATE", state)
-          out = String.unlines(lines)
+
+
+          // out = multiLine ? processMultiLine(lines) : String.unlines(lines)
+          out = pipe(
+            List.reject(
+              pipe(
+                String.trim,
+                _String.uncomment,
+                String.trim,
+                String.isEmpty,
+              ),
+            ),
+            // String.unlines,
+            multiLine ? processMultiLine : String.unlines,
+          )(lines)
           return "/* mad-literate@"
             ++ version
             ++ " */\n/* generated from: "
@@ -185,9 +240,9 @@ useSpiritGum = (version, input, output) => pipe(
   ),
 )(INITIAL_STATE)
 applyMadlibJsonToState :: SpiritGumState -> MadlibDotJson -> Wish String String
-applyMadlibJsonToState = ({ input, output }, json) => where(#[input, output]) {
+applyMadlibJsonToState = ({ multiLine, input, output }, json) => where(#[input, output]) {
   #[Just(i), Just(o)] =>
-    useSpiritGum(Version.showVersion(json.version), i, o)
+    useSpiritGum(multiLine, Version.showVersion(json.version), i, o)
 
   _ =>
     Wish.bad(READING_IS_HARD)

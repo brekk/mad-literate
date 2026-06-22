@@ -1,4 +1,5 @@
 import Fn from "Function"
+import IO from "IO"
 import List from "List"
 import String from "String"
 
@@ -36,6 +37,7 @@ export processBodyWithHeadmatter = (version, head, body) => {
 }
 processFileWithHeadmatter :: String -> List String -> String
 export processFileWithHeadmatter = (version, lines) => {
+  IO.pTrace("PROCESS FILE WITH HEADMATTER", version)
   ind = findIndex(isHeadmark, lines)
   return ind < 0
     ? processBody(lines)
