@@ -1,8 +1,9 @@
 export INDENT = "    "
 export MAIN_START = "main = () => {"
 export HEAD_MARKER = "---"
-export MAD_MARKER = "==="
+export MAD_MARKER = "***"
 export COMMENT = "// "
 export BAR = '|'
 export COMMA = ','
 export DOUBLE_COLON = "::"
+export LIBRARY = "!library"

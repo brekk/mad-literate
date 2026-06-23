@@ -2,6 +2,7 @@ import Fn from "Function"
 import List from "List"
 import String from "String"
 
+import { LIBRARY } from "@/Constants"
 import { brace, enquote, entype, hasBar, hasComma, hasDoubleColon } from "@/String"
 
 
@@ -16,11 +17,14 @@ export subentity = (doTypeImport, raw) => {
     String.trim,
   )(raw)
 }
-export processImports = (doTypeImport, a, b) => "import "
+export processImports = (doTypeImport, a, b) => if (String.contains(LIBRARY, a)) {
+  ""
+} else {
+  "import "
     ++ subentity(doTypeImport, a)
     ++ " from "
     ++ enquote(List.length(b) > 0 ? String.unwords(b) : a)
-
+}
 export processHead = pipe(
   List.reject(String.isEmpty),
   map(
@@ -36,5 +40,6 @@ export processHead = pipe(
       },
     )(raw),
   ),
+  List.reject(String.isEmpty),
   String.unlines,
 )

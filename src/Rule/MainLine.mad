@@ -8,7 +8,9 @@ import { INDENT, MAD_MARKER } from "@/Constants"
 export _processMadmarker = Transformer.ofLine(
   (meta, _, line) => {
     hasMadmarker = meta.madmarker > -1
-    return hasMadmarker && line == MAD_MARKER ? INDENT ++ "export main = () => {" : line
+    return !meta.isLibrary && hasMadmarker && line == MAD_MARKER
+      ? INDENT ++ "export main = () => {"
+      : line
   },
 )
 export rule = Rule.lineRule(false, "mad-literate/madmarker/line", [], [_processMadmarker])

@@ -155,7 +155,7 @@ READING_IS_HARD = helpful(
 )
 renderSoloLine = pipe(
   Line.safeRender,
-  map(Fn.unless(String.startsWith(INDENT), mappend(COMMENT ++ " "))),
+  map(Fn.unless(Fn.either(String.isEmpty, String.startsWith(INDENT)), mappend(COMMENT ++ " "))),
   fromMaybe(""),
 )
 processMultiLine = (lines) => {
@@ -170,10 +170,10 @@ processMultiLine = (lines) => {
           Fn.when(String.startsWith(COMMENT), _String.uncomment),
           String.trim,
         )
-        updatedCurrent = nowCommenting ? [...current, comfix(a)] : current
+        updatedCurrent = nowCommenting ? [...current, comfix(a)] : []
         nowProcessed = !nowCommenting && commenting
           ? [...processed, "/*\n" ++ String.unlines(current) ++ "\n*/\n", nowCommenting ? "" : a]
-          : [...processed, a]
+          : [...processed, String.startsWith(COMMENT, a) ? "" : a]
         IO.pTrace("NOW COM", #[nowCommenting, a, nowProcessed])
         return commentChunks(nowProcessed, nowCommenting, updatedCurrent, z)
       }
@@ -198,24 +198,12 @@ useSpiritGum = (multiLine, version, input, output) => pipe(
     pipe(
       env.cli("yes!"),
       Template.renderWithConverter(
-        // map(render1),
-        // map(multiLine ? Line.render : renderSoloLine),
         map(renderSoloLine),
         (_, lines, state) => {
           env.cli("STATE", state)
 
 
-          // out = multiLine ? processMultiLine(lines) : String.unlines(lines)
           out = pipe(
-            List.reject(
-              pipe(
-                String.trim,
-                _String.uncomment,
-                String.trim,
-                String.isEmpty,
-              ),
-            ),
-            // String.unlines,
             multiLine ? processMultiLine : String.unlines,
           )(lines)
           return "/* mad-literate@"
@@ -225,7 +213,7 @@ useSpiritGum = (multiLine, version, input, output) => pipe(
             ++ " */\n\n"
             ++ state.imports
             ++ "\n\n\n"
-            ++ (state.madmarker > -1 ? out ++ "\n}\n" : out)
+            ++ (state.madmarker > -1 ? out ++ (state.isLibrary ? "" : "\n}\n") : out)
         },
       ),
     ),

@@ -18,6 +18,7 @@ export alias SpiritGumState = {
   ...EnsignState,
   headmarker :: Integer,
   imports :: String,
+  isLibrary :: Boolean,
   madmarker :: Integer,
 }
 INITIAL_STATE :: SpiritGumState
@@ -33,4 +34,5 @@ export INITIAL_STATE = {
   runOnFinish: false,
   useColor: true,
   multiLine: false,
+  isLibrary: false,
 }

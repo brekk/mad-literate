@@ -14,12 +14,12 @@ It's [Markdown](markdown) but also the code ends up being used as the body of a 
     a = 100
     b = 33
 
-This content exists before the `main` declaration, because of the magic `===` delimiter. Markdown will simply treat this as a horizontal rule.
+This content exists before the `main` declaration, because of the magic `***` delimiter. Markdown will simply treat this as a horizontal rule.
 
     type RGB a = Red(a) | Blue(a) | Green(a)
     type Knowledge a = Unknown | Known(a) | Learned(a)
 
-===
+***
 
 This content is now defined within the `main` function declaration.
 
