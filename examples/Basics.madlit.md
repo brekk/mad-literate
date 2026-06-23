@@ -1,22 +1,15 @@
----
-fromMaybe | Just | Nothing : Maybe
-Either :: Either
-Maybe :: Maybe
-IO
----
+This is a valid Madlib file! It is also a markdown file.
 
-This is an example of the basics.
+    audience = "WORLD"
 
-It has headmatter content which allows for dynamic imports.
+We're defining a local variable called `audience` here, and it's set to the String `"WORLD"`. If you've done an intro course to computer science before, you may be able to guess at what's coming.
 
-We can define some stuff here:
+    greeting = "HELLO"
 
-    hundred = Just(100)
-    bad = Nothing
+But you're wrong. This file is an example that doesn't use any imports. And without imports, we can't import `IO` and call `IO.log(greeting ++ audience)`
 
-And now let's do something with those imports:
+Nice try, sucka! You're not gonna learn anything runnable here.
 
-    pipe(
-      fromMaybe(33),
-      IO.pTrace("outputs!")
-    )(bad)
+You can't even test whether this works as a library file, 'cause that needs a pseudo import!
+
+Peace!

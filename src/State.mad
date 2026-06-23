@@ -5,6 +5,7 @@ import { Nothing } from "Maybe"
 
 
 export alias EnsignState = {
+  codeOnly :: Boolean,
   cwd :: Maybe String,
   help :: Boolean,
   input :: Maybe String,
@@ -23,6 +24,7 @@ export alias SpiritGumState = {
 }
 INITIAL_STATE :: SpiritGumState
 export INITIAL_STATE = {
+  codeOnly: false,
   cwd: Nothing,
   headmarker: -1,
   help: false,
