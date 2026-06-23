@@ -9,8 +9,7 @@ import FilePath from "FilePath"
 import Fn from "Function"
 import IO from "IO"
 import List from "List"
-import { fromMaybe } from "Maybe"
-import { Just, Nothing } from "Maybe"
+import { Just, fromMaybe } from "Maybe"
 import String from "String"
 import Wish from "Wish"
 
@@ -27,6 +26,7 @@ import VFile from "spirit-gum/VFile"
 import { COMMENT, INDENT } from "@/Constants"
 import { env } from "@/Log"
 import Log from "@/Log"
+import Meta from "@/Meta"
 import { rules } from "@/Rules"
 import { INITIAL_STATE } from "@/State"
 import _String from "@/String"
@@ -34,6 +34,7 @@ import _String from "@/String"
 
 
 export FLAGS = [
+  DFlag.flagBoolean("format", ["f"], "Format the resulting file"),
   DFlag.flagBoolean("help", ["h"], "This text you're reading!"),
   DFlag.flagString("input", ["i"], "The .litmad file to read. Required"),
   DFlag.flagString("output", ["o"], "The .mad file to write. Optional, inferred from the input"),
@@ -56,7 +57,8 @@ export FLAGS = [
 renderHelp = (useColor, flags) => {
   fn = (useColor ? EPrint.printLegendWithColor : EPrint.printLegend)
   return ` mad-literate
-a useful and expressive syntax for writing Madlib files`
+a useful and expressive syntax for writing Madlib`
+    ++ "\n"
     ++ fn(flags)
 }
 LITERATI = "📗"
@@ -107,10 +109,14 @@ captureTheFlag = (state, flag) => where(flag) {
     if (k == "help") {
       // exclusive / short-circuiting
       #[true, { ...state, help: v }]
+    } else if (k == "format") {
+      #[false, { ...state, doFormat: v }]
     } else if (k == "color") {
       #[false, { ...state, useColor: v }]
     } else if (k == "code-only") {
       #[false, { ...state, codeOnly: v }]
+    } else if (k == "run") {
+      #[false, { ...state, runOnFinish: v }]
     } else if (k == "multi-line") {
       #[false, { ...state, multiLine: v }]
     } else {
@@ -182,11 +188,9 @@ processMultiLine = (lines) => {
         nowProcessed = !nowCommenting && commenting
           ? [...processed, "/*\n" ++ String.unlines(current) ++ "\n*/\n", nowCommenting ? "" : a]
           : [...processed, String.startsWith(COMMENT, a) ? "" : a]
-        IO.pTrace("NOW COM", #[nowCommenting, a, nowProcessed])
         return commentChunks(nowProcessed, nowCommenting, updatedCurrent, z)
       }
   }
-  IO.pTrace("Pterodactyle", true)
   return pipe(
     List.reject(
       pipe(
@@ -212,7 +216,6 @@ useSpiritGum = (version, { codeOnly, multiLine, input, output }) => pipe(
   Wish.mapRej(Fn.always("Unable to process virtual file")),
   map(
     pipe(
-      env.cli("yes!"),
       Template.renderWithConverter(
         map(renderSoloLine(codeOnly)),
         (_, lines, state) => {
@@ -268,7 +271,9 @@ main = (args) => {
     Log.env.cli("initial state"),
     /* do stuff based on that state */
     (state) => {
-      { madlibJson, input, output, useColor, help } = state
+      { madlibJson, runOnFinish, doFormat, input, output, useColor, help } = state
+      IO.pTrace("RUNONSENTENCE", runOnFinish)
+      IO.pTrace("FORMDOANDWERUN", doFormat)
       return if (help) {
         Wish.bad(renderHelp(useColor, FLAGS))
       } else do {
@@ -288,6 +293,14 @@ main = (args) => {
               ),
           ),
           chain(applyMadlibJsonToState(state)),
+          // doFormat
+          //   ? chain(
+          //     pipe(
+          //       Meta.formatAndFix(output),
+          //       Wish.mapRej(Fn.always("Unable to format!")),
+          //     ),
+          //   )
+          //   : Fn.identity,
         )(sourceJsonPath)
       }
     },

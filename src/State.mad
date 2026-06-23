@@ -7,6 +7,7 @@ import { Nothing } from "Maybe"
 export alias EnsignState = {
   codeOnly :: Boolean,
   cwd :: Maybe String,
+  doFormat :: Boolean,
   help :: Boolean,
   input :: Maybe String,
   madlibJson :: Maybe String,
@@ -26,15 +27,16 @@ INITIAL_STATE :: SpiritGumState
 export INITIAL_STATE = {
   codeOnly: false,
   cwd: Nothing,
+  doFormat: false,
   headmarker: -1,
   help: false,
   imports: "",
   input: Nothing,
+  isLibrary: false,
   madlibJson: Nothing,
   madmarker: -1,
+  multiLine: false,
   output: Nothing,
   runOnFinish: false,
   useColor: true,
-  multiLine: false,
-  isLibrary: false,
 }

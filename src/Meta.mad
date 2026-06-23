@@ -1,0 +1,19 @@
+import type { CommandResult } from "Process"
+import type { Wish } from "Wish"
+
+import List from "List"
+import Process from "Process"
+
+
+
+alias CommandWish = Wish CommandResult CommandResult
+execute :: String -> List String -> CommandWish
+export execute = Process.exec($, $, Process.DEFAULT_COMMAND_OPTIONS)
+export meta = execute("madlib")
+export withMeta = (y, x) => pipe(
+  List.append(x),
+  meta,
+)(y)
+export format = withMeta(["format", "-i"])
+export formatAndFix = withMeta(["format", "--fix", "-i"])
+export run = withMeta(["run"])
