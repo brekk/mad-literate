@@ -1,3 +1,5 @@
+import type { Maybe } from "Maybe"
+
 import type { Flag } from "ensign/Flags"
 import type { MadlibDotJson } from "mad-at-json/Parse/MadlibJson"
 
@@ -10,6 +12,7 @@ import Fn from "Function"
 import IO from "IO"
 import List from "List"
 import { Just, fromMaybe } from "Maybe"
+import Monad from "Monad"
 import String from "String"
 import Wish from "Wish"
 
@@ -257,6 +260,24 @@ applyMadlibJsonToState = (state, json) => where(#[state.input, state.output]) {
   _ =>
     Wish.bad(READING_IS_HARD)
 }
+processFormatting :: String -> Wish String String -> Wish String String
+processFormatting = (outputPath, wish) => chain(
+  (_) => pipe(
+    Log.env.cli("formatting"),
+    Meta.formatAndFix,
+    map(Fn.always("Formatted!")),
+    Wish.mapRej(Fn.always("Unable to format!")),
+  )(outputPath),
+  wish,
+)
+runFile = (outputPath, wish) => chain(
+  (_) => pipe(
+    Meta.run,
+    map(.stdout),
+    Wish.mapRej(Fn.always("Unable to run!")),
+  )(outputPath),
+  wish,
+)
 main = (args) => {
   pipe(
     /* cut the first argument, it's the name of this file */
@@ -272,6 +293,7 @@ main = (args) => {
     /* do stuff based on that state */
     (state) => {
       { madlibJson, runOnFinish, doFormat, input, output, useColor, help } = state
+      outputish = fromMaybe("", output)
       IO.pTrace("RUNONSENTENCE", runOnFinish)
       IO.pTrace("FORMDOANDWERUN", doFormat)
       return if (help) {
@@ -293,14 +315,9 @@ main = (args) => {
               ),
           ),
           chain(applyMadlibJsonToState(state)),
-          // doFormat
-          //   ? chain(
-          //     pipe(
-          //       Meta.formatAndFix(output),
-          //       Wish.mapRej(Fn.always("Unable to format!")),
-          //     ),
-          //   )
-          //   : Fn.identity,
+          map(Log.env.cli("what's happening")),
+          doFormat ? processFormatting(outputish) : Fn.identity,
+          runOnFinish ? runFile(outputish) : Fn.identity,
         )(sourceJsonPath)
       }
     },
