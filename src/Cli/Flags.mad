@@ -1,0 +1,118 @@
+import type { Maybe } from "Maybe"
+import type { Wish } from "Wish"
+
+import type { Flag } from "ensign/Flags"
+import type { MadlibDotJson } from "mad-at-json/Parse/MadlibJson"
+
+import type { SpiritGumState } from "@/State"
+
+import Either from "Either"
+import List from "List"
+import { Just, fromMaybe } from "Maybe"
+
+import Declared from "ensign/Declared"
+import DFlag from "ensign/Declared/Flags"
+import EPrint from "ensign/Declared/Print"
+import EFlags from "ensign/Flags"
+
+import Log from "@/Log"
+
+
+
+export FLAGS = [
+  DFlag.flagBoolean("format", ["f"], "Format the resulting file"),
+  DFlag.flagBoolean("help", ["h"], "This text you're reading!"),
+  DFlag.flagString("input", ["i"], "The .litmad file to read. Required"),
+  DFlag.flagString("output", ["o"], "The .mad file to write. Optional, inferred from the input"),
+  DFlag.flagBoolean("code-only", ["d"], "Strip all comments from the resulting .mad file"),
+  DFlag.flagBoolean("run", ["r"], "Run the file after conversion"),
+  DFlag.flagString("cwd", ["c"], "Set the working path"),
+  DFlag.flagBoolean("color", ["K"], "Render the things with color"),
+  DFlag.flagBoolean(
+    "multi-line",
+    ["L"],
+    "Render with multi-line comments rather than single line comments",
+  ),
+  DFlag.flagString("madlib-json", ["madlib", "M"], "Set the path to `madlib.json`"),
+  DFlag.flagBoolean(
+    "collapse-comments",
+    ["collapse", "C"],
+    "Collapse single line comments into multi-line comments",
+  ),
+]
+// state plus an exclusive / interrupt flag as the first value
+export alias ContinueState = #[Boolean, SpiritGumState]
+processFlagState :: SpiritGumState
+  -> (SpiritGumState -> Flag -> ContinueState)
+  -> List Flag
+  -> SpiritGumState
+export processFlagState = (state, process, flags) => {
+  walker = (done, aggState, toProcess) => if (done) {
+    aggState
+  } else {
+    where(toProcess) {
+      [] =>
+        aggState
+
+      [a, ...z] =>
+        where(process(aggState, a)) {
+          #[stop, upState] =>
+            walker(stop, upState, z)
+        }
+    }
+  }
+  return walker(false, state, flags)
+}
+export parseArgs = pipe(
+  EFlags.parseFlags,
+  Declared.validate(FLAGS),
+  Either.mapLeft(EPrint.printIssues),
+)
+captureTheFlag :: SpiritGumState -> Flag -> ContinueState
+export captureTheFlag = (state, flag) => where(flag) {
+  EFlags.Flag(k, v) =>
+    if (k == "madlib-json") {
+      #[false, { ...state, madlibJson: Just(v) }]
+    } else if (k == "output") {
+      #[false, { ...state, output: Just(v) }]
+    } else if (k == "input") {
+      #[false, { ...state, input: Just(v) }]
+    } else if (k == "cwd") {
+      #[false, { ...state, cwd: Just(v) }]
+    } else {
+      #[false, state]
+    }
+
+  EFlags.FlagToggle(k, v) =>
+    if (k == "help") {
+      // exclusive / short-circuiting
+      #[true, { ...state, help: v }]
+    } else if (k == "format") {
+      #[false, { ...state, doFormat: v }]
+    } else if (k == "color") {
+      #[false, { ...state, useColor: v }]
+    } else if (k == "code-only") {
+      #[false, { ...state, codeOnly: v }]
+    } else if (k == "run") {
+      #[false, { ...state, runOnFinish: v }]
+    } else if (k == "multi-line") {
+      #[false, { ...state, multiLine: v }]
+    } else {
+      #[false, state]
+    }
+
+  _ =>
+    #[false, state]
+}
+parseArgsWithState :: SpiritGumState -> List String -> Either String SpiritGumState
+export parseArgsWithState = (initState, raw) => pipe(
+  /* process the given arguments against the legend of the defined flags */
+  parseArgs,
+  map(
+    pipe(
+      Log.env.cli("parsed arguments"),
+      /* fold over our flags to build an initial state */
+      processFlagState(initState, captureTheFlag),
+    ),
+  ),
+)(raw)

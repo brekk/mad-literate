@@ -1,0 +1,39 @@
+import Fn from "Function"
+import List from "List"
+import String from "String"
+
+import { COMMENT } from "@/Constants"
+import _String from "@/String"
+
+
+
+export processMultiLine = (lines) => {
+  commentChunks = (processed, commenting, current, remainingLines) => where(remainingLines) {
+    [] =>
+      processed
+
+    [a, ...z] =>
+      do {
+        nowCommenting = String.startsWith(COMMENT, a)
+        comfix = pipe(
+          Fn.when(String.startsWith(COMMENT), _String.uncomment),
+          String.trim,
+        )
+        updatedCurrent = nowCommenting ? [...current, comfix(a)] : []
+        nowProcessed = !nowCommenting && commenting
+          ? [...processed, "/*\n" ++ String.unlines(current) ++ "\n*/\n", nowCommenting ? "" : a]
+          : [...processed, String.startsWith(COMMENT, a) ? "" : a]
+        return commentChunks(nowProcessed, nowCommenting, updatedCurrent, z)
+      }
+  }
+  return pipe(
+    List.reject(
+      pipe(
+        _String.uncomment,
+        String.isEmpty,
+      ),
+    ),
+    commentChunks([], true, []),
+    String.unlines,
+  )(lines)
+}

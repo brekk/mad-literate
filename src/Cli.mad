@@ -1,330 +1,124 @@
-import type { Maybe } from "Maybe"
-
-import type { Flag } from "ensign/Flags"
-import type { MadlibDotJson } from "mad-at-json/Parse/MadlibJson"
-
-import type { SpiritGumState } from "@/State"
-
 import Either from "Either"
 import File from "File"
-import FilePath from "FilePath"
 import Fn from "Function"
 import IO from "IO"
 import List from "List"
 import { Just, fromMaybe } from "Maybe"
-import Monad from "Monad"
 import String from "String"
 import Wish from "Wish"
 
-import Declared from "ensign/Declared"
-import DFlag from "ensign/Declared/Flags"
 import EPrint from "ensign/Declared/Print"
-import EFlags from "ensign/Flags"
 import MadlibJson from "mad-at-json/Parse/MadlibJson"
 import Version from "mad-at-json/Version"
-import Line from "spirit-gum/Line"
 import Template from "spirit-gum/Template"
-import VFile from "spirit-gum/VFile"
 
-import { COMMENT, INDENT } from "@/Constants"
+import Cadet from "@/Cli/Flags"
+import { FLAGS } from "@/Cli/Flags"
+import Printer from "@/Cli/Print"
+import Prosthetic from "@/Cli/SpiritGum"
+import Multiline from "@/CommentMultiline"
+import _Fn from "@/Function"
 import { env } from "@/Log"
 import Log from "@/Log"
+import _Maybe from "@/Maybe"
 import Meta from "@/Meta"
-import { rules } from "@/Rules"
 import { INITIAL_STATE } from "@/State"
 import _String from "@/String"
 
 
 
-export FLAGS = [
-  DFlag.flagBoolean("format", ["f"], "Format the resulting file"),
-  DFlag.flagBoolean("help", ["h"], "This text you're reading!"),
-  DFlag.flagString("input", ["i"], "The .litmad file to read. Required"),
-  DFlag.flagString("output", ["o"], "The .mad file to write. Optional, inferred from the input"),
-  DFlag.flagBoolean("code-only", ["d"], "Strip all comments from the resulting .mad file"),
-  DFlag.flagBoolean("run", ["r"], "Run the file after conversion"),
-  DFlag.flagString("cwd", ["c"], "Set the working path"),
-  DFlag.flagBoolean("color", ["K"], "Render the things with color"),
-  DFlag.flagBoolean(
-    "multi-line",
-    ["L"],
-    "Render with multi-line comments rather than single line comments",
-  ),
-  DFlag.flagString("madlib-json", ["madlib", "M"], "Set the path to `madlib.json`"),
-  DFlag.flagBoolean(
-    "collapse-comments",
-    ["collapse", "C"],
-    "Collapse single line comments into multi-line comments",
-  ),
-]
-renderHelp = (useColor, flags) => {
+renderHelp = (preface, useColor, flags) => {
   fn = (useColor ? EPrint.printLegendWithColor : EPrint.printLegend)
-  return ` mad-literate
+  return (String.isEmpty(preface) ? "" : preface ++ "\n")
+    ++ `mad-literate
 a useful and expressive syntax for writing Madlib`
     ++ "\n"
     ++ fn(flags)
 }
 LITERATI = "📗"
 BAD_LITERATI = "📕"
-relative = (cwd, i) => FilePath.joinPath([cwd, i])
-processFlagState :: SpiritGumState
-  -> (SpiritGumState -> Flag -> #[Boolean, SpiritGumState])
-  -> List Flag
-  -> SpiritGumState
-processFlagState = (state, process, flags) => {
-  walker = (done, aggState, toProcess) => if (done) {
-    aggState
-  } else {
-    where(toProcess) {
-      [] =>
-        aggState
-
-      [a, ...z] =>
-        where(process(aggState, a)) {
-          #[stop, upState] =>
-            walker(stop, upState, z)
-        }
-    }
-  }
-  return walker(false, state, flags)
-}
-parseArgs = pipe(
-  EFlags.parseFlags,
-  Declared.validate(FLAGS),
-  Either.mapLeft(EPrint.printIssues),
-)
-captureTheFlag :: SpiritGumState -> Flag -> #[Boolean, SpiritGumState]
-captureTheFlag = (state, flag) => where(flag) {
-  EFlags.Flag(k, v) =>
-    if (k == "madlib-json") {
-      #[false, { ...state, madlibJson: Just(v) }]
-    } else if (k == "output") {
-      #[false, { ...state, output: Just(v) }]
-    } else if (k == "input") {
-      #[false, { ...state, input: Just(v) }]
-    } else if (k == "cwd") {
-      #[false, { ...state, cwd: Just(v) }]
-    } else {
-      #[false, state]
-    }
-
-  EFlags.FlagToggle(k, v) =>
-    if (k == "help") {
-      // exclusive / short-circuiting
-      #[true, { ...state, help: v }]
-    } else if (k == "format") {
-      #[false, { ...state, doFormat: v }]
-    } else if (k == "color") {
-      #[false, { ...state, useColor: v }]
-    } else if (k == "code-only") {
-      #[false, { ...state, codeOnly: v }]
-    } else if (k == "run") {
-      #[false, { ...state, runOnFinish: v }]
-    } else if (k == "multi-line") {
-      #[false, { ...state, multiLine: v }]
-    } else {
-      #[false, state]
-    }
-
-  _ =>
-    #[false, state]
-}
-extant = pipe(
-  File.exists,
-  Wish.chainRej((_) => Wish.good(false)),
-)
-ifFileEmpty = (o, goodPath) => pipe(
-  extant,
-  Wish.mapRej((_) => `${o} can't be inspected`),
-  chain(
-    (fail) => (
-      fail
-        ? Wish.bad(`${o} already exists. (Use --force if you know what you're doing.)`)
-        : goodPath(o)
-    ),
-  ),
-)(o)
-thrappend = (a, b, c) => a ++ b ++ c
-spaced = thrappend($, " ")
-lined = thrappend($, "\n")
-fillfull = Wish.fulfill(
+execute = (doRun, wish) => Wish.fulfill(
   pipe(
-    spaced(BAD_LITERATI),
+    _String.spaced(BAD_LITERATI),
     IO.putLine,
     Fn.always({}),
   ),
   pipe(
-    show,
-    spaced(LITERATI),
-    IO.putLine,
+    doRun
+      ? IO.put
+      : pipe(
+        show,
+        _String.spaced(LITERATI),
+        IO.putLine,
+      ),
     Fn.always({}),
   ),
+  wish,
 )
 HELP_ME = "Try `madlit --help` for more info"
-helpful = lined($, HELP_ME)
+helpful = _String.lined($, HELP_ME)
+// I think technically this is an impossible state to get to. prove it with a test
 READING_IS_HARD = helpful(
   "Unable to process the given instructions. `--input`, `--output` are required.",
 )
-renderSoloLine = (codeOnly, x) => pipe(
-  Line.safeRender,
-  map(
-    Fn.unless(
-      Fn.either(String.isEmpty, String.startsWith(INDENT)),
-      (y) => codeOnly ? "" : mappend(COMMENT ++ " ", y),
-    ),
-  ),
-  fromMaybe(""),
-)(x)
-processMultiLine = (lines) => {
-  commentChunks = (processed, commenting, current, remainingLines) => where(remainingLines) {
-    [] =>
-      processed
-
-    [a, ...z] =>
-      do {
-        nowCommenting = String.startsWith(COMMENT, a)
-        comfix = pipe(
-          Fn.when(String.startsWith(COMMENT), _String.uncomment),
-          String.trim,
-        )
-        updatedCurrent = nowCommenting ? [...current, comfix(a)] : []
-        nowProcessed = !nowCommenting && commenting
-          ? [...processed, "/*\n" ++ String.unlines(current) ++ "\n*/\n", nowCommenting ? "" : a]
-          : [...processed, String.startsWith(COMMENT, a) ? "" : a]
-        return commentChunks(nowProcessed, nowCommenting, updatedCurrent, z)
-      }
-  }
-  return pipe(
-    List.reject(
-      pipe(
-        _String.uncomment,
-        String.isEmpty,
-      ),
-    ),
-    commentChunks([], true, []),
-    String.unlines,
-  )(lines)
-}
-alias FlatState = { codeOnly :: Boolean, input :: String, multiLine :: Boolean, output :: String }
-renderFlag = (k, v) => Fn.complement(String.isEmpty)(v) ? k ++ " " ++ v : ""
-rerenderFlags = ({ input, output, multiLine }) => "madlit "
-    ++ renderFlag("-i", input)
-    ++ " "
-    ++ renderFlag("-o", output)
-    ++ " "
-    ++ renderFlag("", multiLine ? "--multi-line" : "")
-useSpiritGum :: String -> FlatState -> Wish String String
-useSpiritGum = (version, { codeOnly, multiLine, input, output }) => pipe(
-  VFile.fromPath(input, env.cli("hey!", rules)),
-  Wish.mapRej(Fn.always("Unable to process virtual file")),
-  map(
-    pipe(
-      Template.renderWithConverter(
-        map(renderSoloLine(codeOnly)),
-        (_, lines, state) => {
-          env.cli("STATE", state)
-
-
-          out = pipe(
-            multiLine ? processMultiLine : String.unlines,
-          )(lines)
-          return "/* This file generated by mad-literate@"
-            ++ version
-            ++ " * using an expression like"
-            ++ rerenderFlags({ multiLine, input, output })
-            ++ " */\n"
-            ++ state.imports
-            ++ "\n\n\n"
-            ++ (state.madmarker > -1 ? out ++ (state.isLibrary ? "" : "\n}\n") : out)
-        },
-      ),
-    ),
-  ),
-  map(env.cli("spirit-gum")),
-  chain(
-    pipe(
-      File.write(output),
-      map(Fn.always("Written!")),
-      Wish.mapRej(Fn.always("Unable to write!")),
-    ),
-  ),
-)(INITIAL_STATE)
-applyMadlibJsonToState :: SpiritGumState -> MadlibDotJson -> Wish String String
-applyMadlibJsonToState = (state, json) => where(#[state.input, state.output]) {
-  #[Just(i), Just(o)] =>
-    useSpiritGum(
-      Version.showVersion(json.version),
-      { codeOnly: state.codeOnly, multiLine: state.multiLine, input: i, output: o },
-    )
-
-  _ =>
-    Wish.bad(READING_IS_HARD)
-}
 processFormatting :: String -> Wish String String -> Wish String String
-processFormatting = (outputPath, wish) => chain(
-  (_) => pipe(
-    Log.env.cli("formatting"),
-    Meta.formatAndFix,
-    map(Fn.always("Formatted!")),
-    Wish.mapRej(Fn.always("Unable to format!")),
-  )(outputPath),
-  wish,
-)
-runFile = (outputPath, wish) => chain(
-  (_) => pipe(
-    Meta.run,
-    map(.stdout),
-    Wish.mapRej(Fn.always("Unable to run!")),
-  )(outputPath),
-  wish,
-)
+processFormatting = (outputPath, wish) => chain((_) => Meta.formatFile(outputPath), wish)
+runFile = (outputPath, wish) => chain((_) => Meta.runFile(outputPath), wish)
+goodRun = (state) => {
+  { madlibJson, runOnFinish, doFormat, output } = state
+
+  outputish = output ?? ""
+  return pipe(
+    Log.env.cli("reading from madlib.json"),
+    File.read,
+    Wish.mapRej(Fn.always("Unable to read!")),
+    chain(MadlibJson.parse),
+    map(Log.env.cli("hey!")),
+    map(
+      Log
+        .tapped
+        .cli(
+          "Loaded madlib.json...",
+          ({ name, version }) => name ++ "@" ++ Version.showVersion(version),
+        ),
+    ),
+    chain(Prosthetic.useSpiritGumWithMadlibJson(Wish.bad(READING_IS_HARD), state)),
+    map(Log.env.cli("what's happening")),
+    _Fn.consequence(doFormat, processFormatting(outputish)),
+    _Fn.consequence(runOnFinish, runFile(outputish)),
+    execute(runOnFinish),
+  )(madlibJson ?? "./madlib.json")
+}
+literate = (state) => {
+  { runOnFinish, input, output, useColor, help } = state
+  noInput = _Maybe.isEmpty(input)
+  noOutput = _Maybe.isEmpty(output)
+  return if (help || noInput || noOutput) do {
+    preface = noInput && noOutput
+      ? "Error: --input and --output are required"
+      : noInput ? "Error: --input is required" : noOutput ? "Error: --output is required" : ""
+    return pipe(
+      Wish.bad,
+      execute(runOnFinish),
+    )(renderHelp(preface, useColor, FLAGS))
+  } else {
+    goodRun(state)
+  }
+}
 main = (args) => {
   pipe(
     /* cut the first argument, it's the name of this file */
     List.drop(1),
-    /* process the given arguments against the legend of the defined flags */
-    parseArgs,
-    map(Log.env.cli("parsed arguments")),
-    /* fold over our flags to build an initial state */
-    map(processFlagState(INITIAL_STATE, captureTheFlag)),
+    /* try to parse args and apply to state */
+    Cadet.parseArgsWithState(INITIAL_STATE),
     /* if that failed, just fall back to our initial state */
     Either.fromRight(INITIAL_STATE),
     Log.env.cli("initial state"),
     /* do stuff based on that state */
-    (state) => {
-      { madlibJson, runOnFinish, doFormat, input, output, useColor, help } = state
-      outputish = fromMaybe("", output)
-      IO.pTrace("RUNONSENTENCE", runOnFinish)
-      IO.pTrace("FORMDOANDWERUN", doFormat)
-      return if (help) {
-        Wish.bad(renderHelp(useColor, FLAGS))
-      } else do {
-        sourceJsonPath = madlibJson ?? "./madlib.json"
-        return pipe(
-          Log.env.cli("reading from madlib.json"),
-          File.read,
-          Wish.mapRej(Fn.always("Unable to read!")),
-          chain(MadlibJson.parse),
-          map(Log.env.cli("hey!")),
-          map(
-            Log
-              .tapped
-              .cli(
-                "Loaded madlib.json...",
-                ({ name, version }) => name ++ "@" ++ Version.showVersion(version),
-              ),
-          ),
-          chain(applyMadlibJsonToState(state)),
-          map(Log.env.cli("what's happening")),
-          doFormat ? processFormatting(outputish) : Fn.identity,
-          runOnFinish ? runFile(outputish) : Fn.identity,
-        )(sourceJsonPath)
-      }
-    },
-    fillfull,
+    literate,
   )(args)
 }
 
 // DEBUG="*" madlib run src/Main.mad -- -i ./Example.litmad -o ./Example.main.mad
 // && madlib format fix -i Example.main.mad
-// && madlib run Example.main.mad
+// && madlib run Example.main.ma

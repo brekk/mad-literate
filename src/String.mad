@@ -99,3 +99,6 @@ export indexOfAfterWhile = (h, ch, str) => {
 }
 indexOf :: Char -> String -> Integer
 export indexOf = indexOfAfter(0)
+thrappend = (a, b, c) => a ++ b ++ c
+export spaced = thrappend($, " ")
+export lined = thrappend($, "\n")

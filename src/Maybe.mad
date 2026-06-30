@@ -1,0 +1,15 @@
+import type { Maybe } from "Maybe"
+
+import { Just, Nothing } from "Maybe"
+import String from "String"
+
+
+
+export like = (fn, m) => where(m) {
+  Just(x) =>
+    fn(x)
+
+  _ =>
+    false
+}
+export isEmpty = like(String.isEmpty)

@@ -1,0 +1,20 @@
+import File from "File"
+import Wish from "Wish"
+
+
+
+export extant = pipe(
+  File.exists,
+  Wish.chainRej((_) => Wish.good(false)),
+)
+export ifFileEmpty = (o, goodPath) => pipe(
+  extant,
+  Wish.mapRej((_) => `${o} can't be inspected`),
+  chain(
+    (fail) => (
+      fail
+        ? Wish.bad(`${o} already exists. (Use --force if you know what you're doing.)`)
+        : goodPath(o)
+    ),
+  ),
+)(o)

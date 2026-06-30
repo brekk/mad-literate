@@ -1,8 +1,10 @@
 import type { CommandResult } from "Process"
 import type { Wish } from "Wish"
 
+import Fn from "Function"
 import List from "List"
 import Process from "Process"
+import Wish from "Wish"
 
 
 
@@ -16,4 +18,14 @@ export withMeta = (y, x) => pipe(
 )(y)
 export format = withMeta(["format", "-i"])
 export formatAndFix = withMeta(["format", "--fix", "-i"])
+export formatFile = pipe(
+  formatAndFix,
+  map(Fn.always("Formatted!")),
+  Wish.mapRej(Fn.always("Unable to format!")),
+)
 export run = withMeta(["run"])
+export runFile = pipe(
+  run,
+  map(.stdout),
+  Wish.mapRej(.stderr),
+)

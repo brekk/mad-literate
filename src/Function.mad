@@ -1,0 +1,1 @@
+export consequence = (k, fn, x) => k ? fn(x) : x
