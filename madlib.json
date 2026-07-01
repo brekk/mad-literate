@@ -2,34 +2,34 @@
   "name": "mad-literate",
   "version": "0.0.1",
   "main": "src/Main.mad",
-  "dependencies": [
-    {
-      "url": "https://github.com/brekk/spirit-gum/archive/refs/tags/v0.2.1.zip",
-      "description": "spirit-gum",
-      "minVersion": "0.2.1"
-    },
-{
-      "url": "https://github.com/brekk/mad-at-json/archive/refs/tags/v0.0.2.zip",
-      "description": "mad-at-json",
-      "minVersion": "0.0.2"
-    },
-    {
-      "url": "https://github.com/brekk/ensign/archive/refs/tags/v0.1.0.zip",
-      "description": "ensign",
-      "minVersion": "0.1.0"
-    },
-    {
-      "url": "https://github.com/brekk/study/archive/refs/tags/v0.0.4.zip",
-      "description": "Study",
-      "minVersion": "0.0.4"
-    },
-    {
-      "url": "https://github.com/brekk/party-bus/archive/refs/tags/v0.0.8.zip",
-      "description": "PartyBus",
-      "minVersion": "0.0.8"
-    }
-  ],
   "importAliases": {
     ".": "src"
-  }
+  },
+  "dependencies": [
+    {
+      "minVersion": "0.2.1",
+      "url": "https://github.com/brekk/spirit-gum/archive/refs/tags/v0.2.1.zip",
+      "description": "spirit-gum"
+    },
+    {
+      "minVersion": "0.0.2",
+      "url": "https://github.com/brekk/mad-at-json/archive/refs/tags/v0.0.2.zip",
+      "description": "mad-at-json"
+    },
+    {
+      "minVersion": "0.1.0",
+      "url": "https://github.com/brekk/ensign/archive/refs/tags/v0.1.0.zip",
+      "description": "ensign"
+    },
+    {
+      "minVersion": "0.0.4",
+      "url": "https://github.com/brekk/study/archive/refs/tags/v0.0.4.zip",
+      "description": "Study"
+    },
+    {
+      "minVersion": "0.0.8",
+      "url": "https://github.com/brekk/party-bus/archive/refs/tags/v0.0.8.zip",
+      "description": "PartyBus"
+    }
+  ]
 }
