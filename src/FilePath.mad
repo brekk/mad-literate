@@ -1,0 +1,36 @@
+import type { FilePath } from "FilePath"
+
+import FilePath from "FilePath"
+import IO from "IO"
+import List from "List"
+import { Just, Nothing } from "Maybe"
+import String from "String"
+
+
+
+takeFullExtension :: FilePath -> FilePath
+export takeFullExtension = pipe(
+  FilePath.takeFileName,
+  String.split("."),
+  List.drop(1),
+  String.join("."),
+)
+takeFileRoot :: String -> String
+export takeFileRoot = (path) => {
+  name = FilePath.takeFileName(path)
+  ext = takeFullExtension(path)
+  checked = String.dropLast(String.length(ext) + 1, name)
+  return checked
+}
+takePath :: String -> String
+export takePath = (path) => {
+  name = FilePath.takeFileName(path)
+  return String.dropLast(String.length(name), path)
+}
+renameExtension :: String -> String -> String
+export renameExtension = (newExt, path) => {
+  a = takePath(path)
+  b = takeFileRoot(path)
+  c = b ++ newExt
+  return FilePath.joinPath([a, c])
+}

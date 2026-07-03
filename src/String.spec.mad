@@ -5,7 +5,6 @@ import {
   chop,
   concat,
   encomment,
-  encommentAll,
   enquote,
   entype,
   hasBar,
@@ -21,7 +20,6 @@ import {
 
 report(concat("test"), "concat", [#["pants", "testpants"]])
 report(encomment, "encomment", [#["blah blah blah", "// blah blah blah"]])
-report(encommentAll, "encommentAll", [#[["blah blah blah"], ["// blah blah blah"]]])
 report(enquote, "enquote", [#["aaa", `"aaa"`]])
 report(brace, "brace", [#["whatever", "{ whatever }"]])
 report(hasBar, "hasBar", [#["|", true], #["whatever", false]])
@@ -29,7 +27,7 @@ report(hasComma, "hasComma", [#[",", true], #["nope", false]])
 report(hasDoubleColon, "hasDoubleColon", [#["::", true], #["nope", false]])
 report(entype, "entype", [#["x", "type x"]])
 report(isHeadmark, "isHeadmark", [#["---", true], #["no", false]])
-report(isMadmark, "isMadmark", [#["===", true], #["no", false]])
+report(isMadmark, "isMadmark", [#["===", false], #["no", false], #["***", true]])
 report(hasHeadMatter, "hasHeadMatter", [#[["---"], true], #[["no"], false]])
-report(hasMadmarker, "hasMadmarker", [#[["==="], true], #[["no"], false]])
+report(hasMadmarker, "hasMadmarker", [#[["==="], false], #[["no"], false], #[["***"], true]])
 report(chop(2), "chop", [#["alphabet", "phabet"]])

@@ -1,27 +1,27 @@
-
-/* generated from: "./examples/Two.madlit.md" */
-
-import type { Maybe } from "Maybe"
-import type { Message, Stream } from "Stream"
-
-import Fn from "Function"
-import IO from "IO"
-import { Just, Nothing } from "Maybe"
-
-
+---
+IO
+List
+Fn: Function
+---
 
 # Madlib Literate Syntax
 It's [Markdown](markdown) but also the code ends up being used as the body of a runnable / `main` Madlib function.
 
-a = 100
-b = 33
+    a = 100
+    b = 33
+
+
 
 This content exists before the `main` declaration, because of the magic `***` delimiter. Markdown will simply treat this as a horizontal rule.
-type RGB a = Red(a) | Blue(a) | Green(a)
-type Knowledge a = Unknown | Known(a) | Learned(a)
+
+    type RGB a = Red(a) | Blue(a) | Green(a)
+    type Knowledge a = Unknown | Known(a) | Learned(a)
+
+
+***
 
 ## Headmatter
-The Headmatter mark, three dashes in a row (`---`) is a magic delimiter which allows for automatic imports with minimal effort
+The Headmatter mark, three dashes in a row (`***`) is a magic delimiter which allows for automatic imports with minimal effort
 `mad-literate` expects either zero or two Headmatter marks that wrap the potential imports, one per line.
 For each line between these headmatter marks: 
 1. A line with a single value with no spaces and no colons, such as `IO`, is evaluated to an implicit named import: `import IO from "IO"`
@@ -35,11 +35,11 @@ For each line between these headmatter marks:
 
 This very file has headmatter imports, which means that we can execute this file and the following expression:
 
-  map(
-    (i) => pipe(
-      Fn.ifElse((x) => x % 2 == 0, Red, Blue),
-      IO.pTrace(`What color is ${show(i)}?`),
-    )(i),
-  )([a, b])
+    map(
+      (i) => pipe(
+        Fn.ifElse((x) => x % 2 == 0, Red, Blue),
+        IO.pTrace(`What color is ${show(i)}?`),
+      )(i),
+    )([a, b])
 
-//  There's nothing required to close the `main` function, regardless of whether you're using the magic `***` delimiter or not.
+There's nothing required to close the `main` function, regardless of whether you're using the magic `***` delimiter or not.

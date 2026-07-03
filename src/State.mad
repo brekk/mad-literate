@@ -14,6 +14,7 @@ export alias EnsignState = {
   multiLine :: Boolean,
   output :: Maybe String,
   runOnFinish :: Boolean,
+  strictMode :: Boolean,
   useColor :: Boolean,
 }
 export alias SpiritGumState = {
@@ -23,6 +24,8 @@ export alias SpiritGumState = {
   isLibrary :: Boolean,
   madmarker :: Integer,
 }
+// to convert from our state object's maybes
+export alias FlatState = { ...SpiritGumState, input :: String, output :: String }
 INITIAL_STATE :: SpiritGumState
 export INITIAL_STATE = {
   codeOnly: false,
@@ -39,4 +42,5 @@ export INITIAL_STATE = {
   output: Nothing,
   runOnFinish: false,
   useColor: true,
+  strictMode: false,
 }

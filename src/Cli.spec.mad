@@ -1,0 +1,11 @@
+import Study from "Study"
+
+
+
+SUCCESS = `📗 "Written!"` ++ "\n"
+presentation = Study.powerpoint("./build/madlit")
+presentation(
+  "good path",
+  [#[["-i", "./examples/Main.madlit.md", "-o", "./examples/Main.literate.mad"], SUCCESS]],
+)
+presentation("infer output path implicitly", [#[["-i", "./examples/Main.madlit.md"], SUCCESS]])

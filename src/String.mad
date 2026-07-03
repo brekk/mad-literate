@@ -12,26 +12,6 @@ import { BAR, COMMA, COMMENT, DOUBLE_COLON, HEAD_MARKER, INDENT, MAD_MARKER } fr
 
 export concat = (a, b) => a ++ b
 export encomment = Fn.when(Fn.complement(String.startsWith("  ")), concat(COMMENT))
-// export encommentAll = map(encomment)
-export encommentAll = (lines) => {
-  commentChunks = (processed, commenting, current, remainingLines) => where(remainingLines) {
-    [] =>
-      processed
-
-    [a, ...z] =>
-      do {
-        nowCommenting = Fn.complement(String.startsWith(INDENT), a)
-        IO.pTrace("NOW COM", nowCommenting)
-        updatedCurrent = nowCommenting ? [...current, String.trim(a)] : current
-        nowProcessed = !nowCommenting && commenting
-          ? [...processed, "/*\n" ++ String.unlines(current) ++ "\n*/\n"]
-          : [...processed, a]
-        return commentChunks(nowProcessed, nowCommenting, updatedCurrent, z)
-      }
-  }
-  IO.pTrace("Pterodactyle", true)
-  return commentChunks([], false, [], lines)
-}
 export enquote = (a) => `"${String.trim(a)}"`
 export brace = pipe(
   concat("{ "),

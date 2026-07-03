@@ -15,6 +15,10 @@ export tags = {
   ruleMainLine: Party.tagWithScope("madlit", ["rule", "main", "line"]),
   body: Party.tagWithScope("madlit", ["body"]),
   cli: Party.tagWithScope("madlit", ["cli"]),
+  cliWarn: Party.tagWithScope("madlit", ["cli", "warn"]),
+  cliInput: Party.tagWithScope("madlit", ["cli", "input"]),
+  cliState: Party.tagWithScope("madlit", ["cli", "state"]),
+  cliDetail: Party.tagWithScope("madlit", ["cli", "detail"]),
 }
 export env = {
   madlit: Party.env(tags.madlit),
@@ -25,6 +29,10 @@ export env = {
   ruleMainLine: Party.env(tags.ruleMainLine),
   body: Party.env(tags.body),
   cli: Party.env(tags.cli),
+  cliWarn: Party.env(tags.cliWarn),
+  cliInput: Party.env(tags.cliInput),
+  cliState: Party.env(tags.cliState),
+  cliDetail: Party.env(tags.cliDetail),
 }
 export tapped = {
   madlit: Party.tap(env.madlit),
@@ -35,4 +43,8 @@ export tapped = {
   ruleMainLine: Party.tap(env.ruleMainLine),
   body: Party.tap(env.body),
   cli: Party.tap(env.cli),
+  cliWarn: Party.tap(env.cliWarn),
+  cliInput: Party.tap(env.cliInput),
+  cliState: Party.tap(env.cliState),
+  cliDetail: Party.tap(env.cliDetail),
 }

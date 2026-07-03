@@ -6,3 +6,7 @@ madlit
  - rule:main:line
  - body
  - cli
+ - cli:warn
+ - cli:input
+ - cli:state
+ - cli:detail

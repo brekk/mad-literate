@@ -1,16 +1,14 @@
 import Rule from "spirit-gum/Rule"
 import Transformer from "spirit-gum/Rule/TransformerLine"
 
-import { INDENT, MAD_MARKER } from "@/Constants"
+import { INDENT, MAD_MARKER, MAIN_START } from "@/Constants"
 
 
 
 export _processMadmarker = Transformer.ofLine(
   (meta, _, line) => {
     hasMadmarker = meta.madmarker > -1
-    return !meta.isLibrary && hasMadmarker && line == MAD_MARKER
-      ? INDENT ++ "export main = () => {"
-      : line
+    return !meta.isLibrary && hasMadmarker && line == MAD_MARKER ? INDENT ++ MAIN_START : line
   },
 )
 export rule = Rule.lineRule(false, "mad-literate/madmarker/line", [], [_processMadmarker])

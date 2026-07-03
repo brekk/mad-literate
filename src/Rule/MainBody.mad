@@ -6,12 +6,12 @@ import Tuple from "Tuple"
 import Rule from "spirit-gum/Rule"
 import Transformer from "spirit-gum/Rule/TransformerBody"
 
-import { MAD_MARKER } from "@/Constants"
+import { INDENT, MAD_MARKER } from "@/Constants"
 
 
 
-export _findMadmarker = Transformer.ofBodyState(
-  (meta, lines) => (
+export _findMadmarker = Transformer.ofBodyRaw(
+  (meta, lines) => #[
     {
       ...meta,
       madmarker: pipe(
@@ -24,7 +24,8 @@ export _findMadmarker = Transformer.ofBodyState(
         map(Tuple.fst),
         fromMaybe(-1),
       )(lines),
-    }
-  ),
+    },
+    meta.isLibrary ? lines : [...lines, #[-1, INDENT ++ "}"]],
+  ],
 )
 export rule = Rule.bodyRule(false, "mad-literate/madmarker/body", [], [_findMadmarker])

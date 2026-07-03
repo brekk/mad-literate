@@ -1,6 +1,7 @@
 import type { Maybe } from "Maybe"
 
-import { Just, Nothing } from "Maybe"
+import Fn from "Function"
+import { Just, Nothing, isJust } from "Maybe"
 import String from "String"
 
 
@@ -12,4 +13,4 @@ export like = (fn, m) => where(m) {
   _ =>
     false
 }
-export isEmpty = like(String.isEmpty)
+export isEmpty = Fn.either(like(String.isEmpty), Fn.complement(isJust))

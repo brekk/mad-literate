@@ -17,6 +17,8 @@ import { FLAGS } from "@/Cli/Flags"
 import Printer from "@/Cli/Print"
 import Prosthetic from "@/Cli/SpiritGum"
 import Multiline from "@/CommentMultiline"
+import { EXTENSION_OUTPUT } from "@/Constants"
+import _FilePath from "@/FilePath"
 import _Fn from "@/Function"
 import { env } from "@/Log"
 import Log from "@/Log"
@@ -58,22 +60,22 @@ execute = (doRun, wish) => Wish.fulfill(
 HELP_ME = "Try `madlit --help` for more info"
 helpful = _String.lined($, HELP_ME)
 // I think technically this is an impossible state to get to. prove it with a test
-READING_IS_HARD = helpful(
-  "Unable to process the given instructions. `--input`, `--output` are required.",
+READING_IS_HARD = helpful("Unable to process the given instructions. `--input` is required.")
+CLOSE_READING_PAYS_OFF = helpful(
+  "Strictly unable to process the instructions: `--output` is required.",
 )
 processFormatting :: String -> Wish String String -> Wish String String
 processFormatting = (outputPath, wish) => chain((_) => Meta.formatFile(outputPath), wish)
 runFile = (outputPath, wish) => chain((_) => Meta.runFile(outputPath), wish)
 goodRun = (state) => {
-  { madlibJson, runOnFinish, doFormat, output } = state
+  { strictMode, madlibJson, runOnFinish, doFormat, output } = state
 
   outputish = output ?? ""
   return pipe(
-    Log.env.cli("reading from madlib.json"),
+    Log.env.cliDetail("reading from madlib.json"),
     File.read,
     Wish.mapRej(Fn.always("Unable to read!")),
     chain(MadlibJson.parse),
-    map(Log.env.cli("hey!")),
     map(
       Log
         .tapped
@@ -82,27 +84,41 @@ goodRun = (state) => {
           ({ name, version }) => name ++ "@" ++ Version.showVersion(version),
         ),
     ),
-    chain(Prosthetic.useSpiritGumWithMadlibJson(Wish.bad(READING_IS_HARD), state)),
+    chain(
+      Prosthetic.useSpiritGumWithMadlibJson(
+        Wish.bad(strictMode ? CLOSE_READING_PAYS_OFF : READING_IS_HARD),
+        state,
+      ),
+    ),
     map(Log.env.cli("what's happening")),
     _Fn.consequence(doFormat, processFormatting(outputish)),
     _Fn.consequence(runOnFinish, runFile(outputish)),
     execute(runOnFinish),
   )(madlibJson ?? "./madlib.json")
 }
+implicitOutput = map(_FilePath.renameExtension(EXTENSION_OUTPUT))
 literate = (state) => {
   { runOnFinish, input, output, useColor, help } = state
   noInput = _Maybe.isEmpty(input)
   noOutput = _Maybe.isEmpty(output)
-  return if (help || noInput || noOutput) do {
-    preface = noInput && noOutput
-      ? "Error: --input and --output are required"
-      : noInput ? "Error: --input is required" : noOutput ? "Error: --output is required" : ""
+
+  _output = if (noOutput) {
+    pipe(
+      implicitOutput,
+      Log.env.cliDetail("inferred output path"),
+    )(input)
+  } else {
+    output
+  }
+
+  return if (help || noInput) do {
+    preface = noInput ? "Error: --input is required" : ""
     return pipe(
       Wish.bad,
       execute(runOnFinish),
     )(renderHelp(preface, useColor, FLAGS))
   } else {
-    goodRun(state)
+    goodRun({ ...state, output: _output })
   }
 }
 main = (args) => {

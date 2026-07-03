@@ -39,6 +39,7 @@ export FLAGS = [
     ["collapse", "C"],
     "Collapse single line comments into multi-line comments",
   ),
+  DFlag.flagBoolean("strict-mode", ["x"], "Turn off inference and helpful behavior, fail early"),
 ]
 // state plus an exclusive / interrupt flag as the first value
 export alias ContinueState = #[Boolean, SpiritGumState]

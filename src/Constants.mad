@@ -7,3 +7,5 @@ export BAR = '|'
 export COMMA = ','
 export DOUBLE_COLON = "::"
 export LIBRARY = "!library"
+export EXTENSION_INPUT = ".madlit.md"
+export EXTENSION_OUTPUT = ".literate.mad"

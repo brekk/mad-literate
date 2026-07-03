@@ -1,0 +1,25 @@
+import Fn from "Function"
+import String from "String"
+
+import Study from "Study"
+
+import C from "@/Constants"
+
+
+
+Study.report(
+  Fn.complement(String.isEmpty),
+  "definite string constants remain extant",
+  [
+    #[C.INDENT, true],
+    #[C.MAIN_START, true],
+    #[C.HEAD_MARKER, true],
+    #[C.MAD_MARKER, true],
+    #[C.COMMENT, true],
+    #[C.DOUBLE_COLON, true],
+    #[C.LIBRARY, true],
+  ],
+)
+
+// #[C.BAR, true],
+// #[C.COMMA, true],

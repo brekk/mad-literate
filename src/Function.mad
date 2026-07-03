@@ -1,1 +1,10 @@
-export consequence = (k, fn, x) => k ? fn(x) : x
+import Fn from "Function"
+
+
+
+I = Fn.identity
+// branch :: Boolean -> (a -> b) -> (a -> b) -> a -> b
+// export branch = (k, aPath, bPath, x) => k ? aPath(x) : bPath(x)
+export branch = (k, a, b, x) => Fn.ifElse(Fn.always(k), a, b)(x)
+consequence :: Boolean -> (a -> b) -> a -> b
+export consequence = branch($, $, I)
