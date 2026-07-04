@@ -25,7 +25,8 @@ export _findMadmarker = Transformer.ofBodyRaw(
         fromMaybe(-1),
       )(lines),
     },
-    meta.isLibrary ? lines : [...lines, #[-1, INDENT ++ "}"]],
+    // wrap non library files with a closing curly
+    meta.isLibrary ? lines : [...lines, #[List.length(lines) + 1, INDENT ++ "}"]],
   ],
 )
 export rule = Rule.bodyRule(false, "mad-literate/madmarker/body", [], [_findMadmarker])
