@@ -22,11 +22,12 @@ main = () => {
   //  The Headmatter mark, three dashes in a row (`***`) is a magic delimiter which allows for automatic imports with minimal effort
   //  `mad-literate` expects either zero or two Headmatter marks that wrap the potential imports, one per line.
   //  For each line between these headmatter marks: 
-  //  1. A line with a single value with no spaces and no colons, such as `IO`, is evaluated to an implicit named import: `import IO from "IO"`
-  //  2. A line with a colon-delimited value, such as `Fn: Function`, is evaluated to an explicit aliased named import `import Fn from "Function"`
-  //  3. A line with both a colon-delimited value and vertical bars on the left side, such as `fromMaybe | Just | Nothing : Maybe`, is evaluated as an import declaration `import {fromMaybe, Just, Nothing} from "Maybe"`
-  //  4. A line with a two-colon-delimited value, such as `Maybe :: Maybe` is a type import expression: `import type { Maybe } from "Maybe"`
-  //  5. A line with both a two-colon-delimited value and vertical bars on the left side, such as `Stream | Message :: Stream` is evaluated as a named member type import: `import type { Stream, Message } from "Stream"`
+
+  //   1. A line with a single value with no spaces and no colons, such as `IO`, is evaluated to an implicit named import: `import IO from "IO"`
+  //   2. A line with a colon-delimited value, such as `Fn: Function`, is evaluated to an explicit aliased named import `import Fn from "Function"`
+  //   3. A line with both a colon-delimited value and vertical bars on the left side, such as `fromMaybe | Just | Nothing : Maybe`, is evaluated as an import declaration `import {fromMaybe, Just, Nothing} from "Maybe"`
+  //   4. A line with a two-colon-delimited value, such as `Maybe :: Maybe` is a type import expression: `import type { Maybe } from "Maybe"`
+  //   5. A line with both a two-colon-delimited value and vertical bars on the left side, such as `Stream | Message :: Stream` is evaluated as a named member type import: `import type { Stream, Message } from "Stream"`
 
   //  (NB: Only rule 1 / the implicit named import is technically invalid according to many Markdown parsers which allow for headmatter. We support it for ease-of-use, but if you want to make your .litmad.md files most portable, you should avoid using it)
 
