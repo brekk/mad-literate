@@ -5,22 +5,19 @@ import IO from "IO"
 import List from "List"
 import { Just, fromMaybe } from "Maybe"
 import String from "String"
+import Term from "Terminal"
 import Wish from "Wish"
 
 import EPrint from "ensign/Declared/Print"
 import MadlibJson from "mad-at-json/Parse/MadlibJson"
 import Version from "mad-at-json/Version"
-import Template from "spirit-gum/Template"
 
 import Cadet from "@/Cli/Flags"
 import { FLAGS } from "@/Cli/Flags"
-import Printer from "@/Cli/Print"
 import Prosthetic from "@/Cli/SpiritGum"
-import Multiline from "@/CommentMultiline"
 import { EXTENSION_OUTPUT } from "@/Constants"
 import _FilePath from "@/FilePath"
 import _Fn from "@/Function"
-import { env } from "@/Log"
 import Log from "@/Log"
 import _Maybe from "@/Maybe"
 import Meta from "@/Meta"
@@ -29,10 +26,16 @@ import _String from "@/String"
 
 
 
+capped = (ab, ba, a, z, m) => ab(a) ++ ba(m) ++ ab(z)
+redBlack = capped(
+  Term.ansiColor([Term.ansi.BGBlack, Term.ansi.FGMagenta]),
+  Term.ansiColor([Term.ansi.FGBlack, Term.ansi.BGMagenta]),
+)
+pilled = redBlack("", "")
 renderHelp = (preface, useColor, flags) => {
   fn = (useColor ? EPrint.printLegendWithColor : EPrint.printLegend)
   return (String.isEmpty(preface) ? "" : preface ++ "\n")
-    ++ `mad-literate
+    ++ `${pilled("mad-literate")}
 a useful and expressive syntax for writing Madlib`
     ++ "\n"
     ++ fn(flags)
@@ -58,8 +61,8 @@ execute = (doRun, wish) => Wish.fulfill(
   wish,
 )
 HELP_ME = "Try `madlit --help` for more info"
-helpful = _String.lined($, HELP_ME)
 // I think technically this is an impossible state to get to. prove it with a test
+helpful = _String.lined($, HELP_ME)
 READING_IS_HARD = helpful("Unable to process the given instructions. `--input` is required.")
 CLOSE_READING_PAYS_OFF = helpful(
   "Strictly unable to process the instructions: `--output` is required.",
@@ -111,8 +114,9 @@ literate = (state) => {
     output
   }
 
+  // show a preface if they're not explicitly asking for help
   return if (help || noInput) do {
-    preface = noInput ? "Error: --input is required" : ""
+    preface = !help && noInput ? "Error: --input is required" : ""
     return pipe(
       Wish.bad,
       execute(runOnFinish),
@@ -124,17 +128,19 @@ literate = (state) => {
 main = (args) => {
   pipe(
     /* cut the first argument, it's the name of this file */
-    List.drop(1),
     /* try to parse args and apply to state */
+    List.drop(1),
     Cadet.parseArgsWithState(INITIAL_STATE),
     /* if that failed, just fall back to our initial state */
     Either.fromRight(INITIAL_STATE),
     Log.env.cli("initial state"),
     /* do stuff based on that state */
     literate,
-  )(args)
+  )(
+    // DEBUG="*" madlib run src/Main.mad -- -i ./Example.litmad -o ./Example.main.mad
+    args,
+  )
 }
 
-// DEBUG="*" madlib run src/Main.mad -- -i ./Example.litmad -o ./Example.main.mad
 // && madlib format fix -i Example.main.mad
 // && madlib run Example.main.ma

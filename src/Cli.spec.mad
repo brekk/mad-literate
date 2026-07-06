@@ -1,11 +1,66 @@
-import Study from "Study"
+import Study from "study/Cli"
 
 
 
-SUCCESS = `📗 "Written!"` ++ "\n"
+EXPLICIT_HELP = `📕 mad-literate
+a useful and expressive syntax for writing Madlib
+--format / -f
+  boolean
+  Format the resulting file
+
+--help / -h
+  boolean
+  This text you're reading!
+
+--input / -i
+  string
+  The .litmad file to read. Required
+
+--output / -o
+  string
+  The .mad file to write. Optional, inferred from the input
+
+--code-only / -d
+  boolean
+  Strip all comments from the resulting .mad file
+
+--run / -r
+  boolean
+  Run the file after conversion
+
+--cwd / -c
+  string
+  Set the working path
+
+--color / -K
+  boolean
+  Render the things with color
+
+--multi-line / -L
+  boolean
+  Render with multi-line comments rather than single line comments
+
+--madlib-json / --madlib / -M
+  string
+  Set the path to `
+  ++ "`madlib.json`"
+  ++ `
+
+--collapse-comments / --collapse / -C
+  boolean
+  Collapse single line comments into multi-line comments
+
+--strict-mode / -x
+  boolean
+  Turn off inference and helpful behavior, fail early`
+  ++ "\n"
+// SUCCESS = `📗 "Written!"` ++ "\n"
+
+msg = (f) => `📗 "${f} - written"` ++ "\n"
+INPATH = "./examples/Main.madlit.md"
+OUTPATH = "./examples/Main.literate.mad"
+SUCCESS = msg(OUTPATH)
 presentation = Study.powerpoint("./build/madlit")
-presentation(
-  "good path",
-  [#[["-i", "./examples/Main.madlit.md", "-o", "./examples/Main.literate.mad"], SUCCESS]],
-)
-presentation("infer output path implicitly", [#[["-i", "./examples/Main.madlit.md"], SUCCESS]])
+presentation("print help", [#[["-h", "--no-color"], EXPLICIT_HELP]])
+presentation("infer output path implicitly", [#[["-i", INPATH], SUCCESS]])
+presentation("good path", [#[["-i", INPATH, "-o", OUTPATH], SUCCESS]])
