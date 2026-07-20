@@ -8,6 +8,7 @@ export alias EnsignState = {
   codeOnly :: Boolean,
   cwd :: Maybe String,
   doFormat :: Boolean,
+  explicitCodeBoundaries :: Boolean,
   help :: Boolean,
   input :: Maybe String,
   madlibJson :: Maybe String,
@@ -19,6 +20,7 @@ export alias EnsignState = {
 }
 export alias SpiritGumState = {
   ...EnsignState,
+  boundaries :: List #[Integer, String],
   headmarker :: Integer,
   imports :: String,
   isLibrary :: Boolean,
@@ -28,6 +30,7 @@ export alias SpiritGumState = {
 export alias FlatState = { ...SpiritGumState, input :: String, output :: String }
 INITIAL_STATE :: SpiritGumState
 export INITIAL_STATE = {
+  explicitCodeBoundaries: false,
   codeOnly: false,
   cwd: Nothing,
   doFormat: false,
@@ -43,4 +46,5 @@ export INITIAL_STATE = {
   runOnFinish: false,
   useColor: true,
   strictMode: false,
+  boundaries: [],
 }

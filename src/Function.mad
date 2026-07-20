@@ -1,4 +1,5 @@
 import Fn from "Function"
+import { Just, Nothing } from "Maybe"
 
 
 
@@ -8,3 +9,18 @@ I = Fn.identity
 export branch = (k, a, b, x) => Fn.ifElse(Fn.always(k), a, b)(x)
 consequence :: Boolean -> (a -> b) -> a -> b
 export consequence = branch($, $, I)
+once :: (a -> b) -> a -> b
+export once = (fn) => {
+  known = Nothing
+  return (x) => where(known) {
+    Just(whatever) =>
+      whatever
+
+    Nothing =>
+      do {
+        y = fn(x)
+        known := Just(y)
+        return y
+      }
+  }
+}

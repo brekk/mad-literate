@@ -1,0 +1,20 @@
+import String from "String"
+import Tuple from "Tuple"
+
+import Rule from "spirit-gum/Rule"
+import Transformer from "spirit-gum/Rule/TransformerLine"
+
+import { CODE_BOUNDARY } from "@/Constants"
+
+
+
+export findCodeBoundary = Transformer.ofLineState(
+  (meta, num, line) => {
+    return if (String.startsWith(CODE_BOUNDARY, line)) {
+      { ...meta, boundaries: [...meta.boundaries, #[num, line]] }
+    } else {
+      meta
+    }
+  },
+)
+export rule = Rule.lineRule(false, "mad-literate/code-boundary/line", [], [findCodeBoundary])

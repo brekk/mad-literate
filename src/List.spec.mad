@@ -1,10 +1,29 @@
+import { Just } from "Maybe"
+import String from "String"
+
 import { caseN2, report } from "Study"
 
-import { chop, findIndex } from "@/List"
+import { chop, facet, findIndex } from "@/List"
 
 
 
 report(findIndex((x) => x % 2 == 0), "findIndex", [#[[1, 3, 5, 7], -1], #[[1, 1, 1, 2], 4]])
-
 source = ["a", "b", "c", "d", "e"]
 report(chop($, source), "chop", [#[2, ["c", "d", "e"]], #[1, ["b", "c", "d", "e"]]])
+isUpperCase = (x) => !String.isEmpty(x) && x == String.toUpper(x)
+isLowerCase = (x) => !String.isEmpty(x) && x == String.toLower(x)
+isNumeric = (x) => (scan(x) ?? -1) > 0
+report(
+  facet([isUpperCase, isLowerCase, isNumeric]),
+  "verify that faceted search works",
+  [
+    // lowercase
+    #[["a", "a", "a"], true],
+    // uppercase
+    #[["A", "A", "A"], true],
+    // numeric
+    #[["1", "2", "3"], true],
+    // none
+    #[["", "", ""], false],
+  ],
+)

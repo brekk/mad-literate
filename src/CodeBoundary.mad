@@ -1,0 +1,46 @@
+import Fn from "Function"
+import IO from "IO"
+import List from "List"
+import Maybe from "Maybe"
+import String from "String"
+import Tuple from "Tuple"
+
+import _Fn from "@/Function"
+
+
+
+tickMedicine = Fn.when(String.startsWith("```"), String.drop(3))
+export alias TripleCode = { end :: Integer, entry :: String, start :: Integer }
+getBoxMap :: List #[Integer, String] -> List TripleCode
+getBoxMap = pipe(
+  List.reduce(
+    (agg, #[end, x]) => where(agg.prev) {
+      Maybe.Just(#[start, entry]) =>
+        ({ ...agg, out: [...agg.out, { start, end, entry }], prev: Maybe.Nothing })
+
+      _ =>
+        ({ ...agg, prev: Maybe.Just(#[end, x]) })
+    },
+    { out: [], prev: Maybe.Nothing },
+  ),
+  .out,
+)
+boxlog = _Fn.once(IO.pTrace("BOXMAPS"))
+checkBoundariesForIndex :: List #[Integer, String] -> Integer -> Boolean
+export checkBoundariesForIndex = (pairs, i) => pipe(
+  getBoxMap,
+  List.filter(
+    pipe(
+      .entry,
+      tickMedicine,
+      String.startsWith("madlib"),
+    ),
+  ),
+  boxlog,
+  List.any(
+    ({ start, end, entry }) => {
+      matched = start >= i && i <= end
+      return matched
+    },
+  ),
+)(pairs)

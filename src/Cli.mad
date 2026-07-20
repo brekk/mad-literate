@@ -125,22 +125,26 @@ literate = (state) => {
     goodRun({ ...state, output: _output })
   }
 }
+/* cut the first argument, it's the name of this file */
+/* try to parse args and apply to state */
+runner = pipe(
+  List.drop(1),
+  Cadet.parseArgsWithState(INITIAL_STATE),
+  /* if that failed, just fall back to our initial state */
+  Either.fromRight(INITIAL_STATE),
+  Log.env.cli("initial state"),
+  /* do stuff based on that state */
+  literate,
+)
 main = (args) => {
-  pipe(
-    /* cut the first argument, it's the name of this file */
-    /* try to parse args and apply to state */
-    List.drop(1),
-    Cadet.parseArgsWithState(INITIAL_STATE),
-    /* if that failed, just fall back to our initial state */
-    Either.fromRight(INITIAL_STATE),
-    Log.env.cli("initial state"),
-    /* do stuff based on that state */
-    literate,
-  )(
-    // DEBUG="*" madlib run src/Main.mad -- -i ./Example.litmad -o ./Example.main.mad
+  runner(
+    // end
     args,
   )
 }
 
+/*
+// DEBUG="*" madlib run src/Main.mad -- -i ./Example.litmad -o ./Example.main.mad
 // && madlib format fix -i Example.main.mad
-// && madlib run Example.main.ma
+// && madlib run Example.main.man
+*/

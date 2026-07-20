@@ -1,7 +1,10 @@
 BUILD_DIR := ./build
+SOURCES := ./src
 EXEC := madlit
 
-$(BUILD_DIR)/$(EXEC):
+DEPS := $(foreach dir, $(SOURCES), $(wildcard $(dir)/*))
+
+$(BUILD_DIR)/$(EXEC): $(DEPS)
 	mkdir -p $(dir $@)
 	echo "compiling! - 📚"
 	madlib compile -i src/Cli.mad -t llvm -o $@

@@ -1,5 +1,6 @@
 export INDENT = "    "
 export MAIN_START = "main = () => {"
+export CODE_BOUNDARY = "```"
 export HEAD_MARKER = "---"
 export MAD_MARKER = "***"
 export COMMENT = "// "

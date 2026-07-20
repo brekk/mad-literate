@@ -13,6 +13,7 @@ import Template from "spirit-gum/Template"
 import VFile from "spirit-gum/VFile"
 
 import Printer from "@/Cli/Print"
+import Boundary from "@/CodeBoundary"
 import Multiline from "@/CommentMultiline"
 import _Fn from "@/Function"
 import Log from "@/Log"
@@ -23,7 +24,7 @@ import { INITIAL_STATE } from "@/State"
 
 K = Fn.always
 resolveAndPrint = (
-  #[version, { isLibrary, imports, madmarker, input, output, multiLine }],
+  #[version, { boundaries, isLibrary, imports, madmarker, input, output, multiLine }],
   _,
   lines,
   state
@@ -41,17 +42,21 @@ resolveAndPrint = (
 }
 useSpiritGum :: String -> FlatState -> Wish String String
 useSpiritGum = (version, state) => {
-  { codeOnly, input, output } = state
+  { codeOnly, input, output, explicitCodeBoundaries: exclusive } = state
   return pipe(
     VFile.fromPath(input, rules),
     Wish.mapRej(K("Unable to process virtual file")),
     map(
-      pipe(
-        Template.renderWithConverter(
-          map(Printer.renderSoloLine(codeOnly)),
-          resolveAndPrint(#[version, state]),
-        ),
-      ),
+      where {
+        VFile.ConcreteFile(a, b, c) =>
+          do {
+            boundChecker = Boundary.checkBoundariesForIndex(c.boundaries)
+            return Template.renderWithConverter(
+              map(Printer.renderSoloLine(boundChecker, exclusive, codeOnly)),
+              resolveAndPrint(#[version, state]),
+            )(VFile.ConcreteFile(a, b, c))
+          }
+      },
     ),
     chain(
       pipe(

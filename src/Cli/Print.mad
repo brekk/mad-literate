@@ -1,3 +1,7 @@
+import type { Wish } from "Wish"
+
+import type { VFileLine } from "spirit-gum/Line"
+
 import Fn from "Function"
 import { fromMaybe } from "Maybe"
 import String from "String"
@@ -15,13 +19,32 @@ export printFlags = ({ input, output, multiLine }) => "madlit "
     ++ _printFlag("-o", output)
     ++ " "
     ++ _printFlag("", multiLine ? "--multi-line" : "")
-export renderSoloLine = (codeOnly, x) => pipe(
-  Line.safeRender,
-  map(
+/*
+map(
     Fn.unless(
       Fn.either(String.isEmpty, String.startsWith(INDENT)),
       (y) => codeOnly ? "" : mappend(COMMENT ++ " ", y),
     ),
   ),
-  fromMaybe(""),
+*/
+
+
+slam = (codeOnly, y) => codeOnly ? "" : mappend(COMMENT ++ " ", y)
+exclusiveMatch = (sclusy, match, y) => !sclusy && !String.startsWith(match, y)
+renderSoloLine :: (Integer -> Boolean) -> Boolean -> Boolean -> VFileLine -> String
+export renderSoloLine = (check, exclusive, codeOnly, x) => pipe(
+  where {
+    Line.ValidLine(i, _x) =>
+      if (!String.isEmpty(_x) && (exclusive && check(i) || exclusiveMatch(exclusive, INDENT, _x))) {
+        slam(codeOnly, _x)
+      } else {
+        _x
+      }
+
+    Line.VirtualLine(_x) =>
+      Fn.unless(Fn.either(String.isEmpty, exclusiveMatch(exclusive, INDENT)), slam(codeOnly))(_x)
+
+    _ =>
+      ""
+  },
 )(x)
