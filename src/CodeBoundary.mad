@@ -6,10 +6,10 @@ import String from "String"
 import Tuple from "Tuple"
 
 import _Fn from "@/Function"
+import _String from "@/String"
 
 
 
-tickMedicine = Fn.when(String.startsWith("```"), String.drop(3))
 export alias TripleCode = { end :: Integer, entry :: String, start :: Integer }
 getBoxMap :: List #[Integer, String] -> List TripleCode
 getBoxMap = pipe(
@@ -32,14 +32,14 @@ export checkBoundariesForIndex = (pairs, i) => pipe(
   List.filter(
     pipe(
       .entry,
-      tickMedicine,
+      _String.tickMedicine,
       String.startsWith("madlib"),
     ),
   ),
   boxlog,
   List.any(
     ({ start, end, entry }) => {
-      matched = start >= i && i <= end
+      matched = start <= i && i <= end
       return matched
     },
   ),

@@ -3,15 +3,18 @@ import type { Wish } from "Wish"
 import type { VFileLine } from "spirit-gum/Line"
 
 import Fn from "Function"
+import IO from "IO"
 import { fromMaybe } from "Maybe"
 import String from "String"
 
 import Line from "spirit-gum/Line"
 
 import { COMMENT, INDENT } from "@/Constants"
+import _String from "@/String"
 
 
 
+K = Fn.always
 export _printFlag = (k, v) => Fn.complement(String.isEmpty)(v) ? k ++ " " ++ v : ""
 export printFlags = ({ input, output, multiLine }) => "madlit "
     ++ _printFlag("-i", input)
@@ -28,15 +31,26 @@ map(
   ),
 */
 
-
+killMadTicks = pipe(
+  _String.tickMedicine,
+  Fn.when(Fn.equals("madlib"), K("")),
+)
 slam = (codeOnly, y) => codeOnly ? "" : mappend(COMMENT ++ " ", y)
 exclusiveMatch = (sclusy, match, y) => !sclusy && !String.startsWith(match, y)
 renderSoloLine :: (Integer -> Boolean) -> Boolean -> Boolean -> VFileLine -> String
 export renderSoloLine = (check, exclusive, codeOnly, x) => pipe(
   where {
     Line.ValidLine(i, _x) =>
-      if (!String.isEmpty(_x) && (exclusive && check(i) || exclusiveMatch(exclusive, INDENT, _x))) {
-        slam(codeOnly, _x)
+      if (!String.isEmpty(_x)) {
+        if (exclusive && !check(i)) do {
+          return slam(codeOnly, _x)
+        } else if (exclusiveMatch(exclusive, INDENT, _x)) {
+          slam(codeOnly, _x)
+        } else if (check(i)) {
+          killMadTicks(_x)
+        } else {
+          _x
+        }
       } else {
         _x
       }

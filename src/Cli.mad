@@ -116,7 +116,7 @@ literate = (state) => {
 
   // show a preface if they're not explicitly asking for help
   return if (help || noInput) do {
-    preface = !help && noInput ? "Error: --input is required" : ""
+    preface = !help && noInput ? "Error: Unable to understand given flags" : ""
     return pipe(
       Wish.bad,
       execute(runOnFinish),

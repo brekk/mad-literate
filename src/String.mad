@@ -82,3 +82,4 @@ export indexOf = indexOfAfter(0)
 thrappend = (a, b, c) => a ++ b ++ c
 export spaced = thrappend($, " ")
 export lined = thrappend($, "\n")
+export tickMedicine = Fn.when(String.startsWith("```"), String.drop(3))

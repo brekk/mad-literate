@@ -30,6 +30,7 @@ REF = {
   color: "color",
   multiLine: "multi-line",
   collapseComments: "collapse-comments",
+  explicitCodeBoundaries: "explicit-boundaries",
   strictMode: "strict-mode",
   madlibJson: "madlib-json",
 }
@@ -56,6 +57,11 @@ export FLAGS = [
     "Collapse single line comments into multi-line comments",
   ),
   DFlag.flagBoolean(REF.strictMode, ["x"], "Turn off inference and helpful behavior, fail early"),
+  DFlag.flagBoolean(
+    REF.explicitCodeBoundaries,
+    ["e"],
+    "Only match explicit code boundaries (use backticks for content)",
+  ),
 ]
 // state plus an exclusive / interrupt flag as the first value
 processFlagState :: SpiritGumState
@@ -105,6 +111,8 @@ export addFlagToState = (state, flag) => where(flag) {
       { ...state, runOnFinish: v }
     } else if (k == REF.multiLine) {
       { ...state, multiLine: v }
+    } else if (k == REF.explicitCodeBoundaries) {
+      { ...state, explicitCodeBoundaries: v }
     } else {
       state
     }
