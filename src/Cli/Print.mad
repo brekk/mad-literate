@@ -9,7 +9,7 @@ import String from "String"
 
 import Line from "spirit-gum/Line"
 
-import { COMMENT, INDENT } from "@/Constants"
+import { COMMENT, INDENT, MAIN_START } from "@/Constants"
 import _String from "@/String"
 
 
@@ -37,11 +37,13 @@ killMadTicks = pipe(
 )
 slam = (codeOnly, y) => codeOnly ? "" : mappend(COMMENT ++ " ", y)
 exclusiveMatch = (sclusy, match, y) => !sclusy && !String.startsWith(match, y)
-renderSoloLine :: (Integer -> Boolean) -> Boolean -> Boolean -> VFileLine -> String
-export renderSoloLine = (check, exclusive, codeOnly, x) => pipe(
+renderSoloLine :: Integer -> (Integer -> Boolean) -> Boolean -> Boolean -> VFileLine -> String
+export renderSoloLine = (madmarker, check, exclusive, codeOnly, x) => pipe(
   where {
     Line.ValidLine(i, _x) =>
-      if (!String.isEmpty(_x)) {
+      if (i == madmarker) {
+        MAIN_START
+      } else if (!String.isEmpty(_x)) {
         if (exclusive && !check(i)) do {
           return slam(codeOnly, _x)
         } else if (exclusiveMatch(exclusive, INDENT, _x)) {
@@ -56,7 +58,7 @@ export renderSoloLine = (check, exclusive, codeOnly, x) => pipe(
       }
 
     Line.VirtualLine(_x) =>
-      Fn.unless(Fn.either(String.isEmpty, exclusiveMatch(exclusive, INDENT)), slam(codeOnly))(_x)
+      _x
 
     _ =>
       ""

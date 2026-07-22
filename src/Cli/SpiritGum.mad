@@ -4,11 +4,14 @@ import type { FlatState, SpiritGumState } from "@/State"
 
 import File from "File"
 import Fn from "Function"
+import IO from "IO"
+import List from "List"
 import { Just, fromMaybe } from "Maybe"
 import String from "String"
 import Wish from "Wish"
 
 import Version from "mad-at-json/Version"
+import Line from "spirit-gum/Line"
 import Template from "spirit-gum/Template"
 import VFile from "spirit-gum/VFile"
 
@@ -40,9 +43,11 @@ resolveAndPrint = (
     out,
   ])
 }
+superSaiyan = (path, lines, state) => {}
 useSpiritGum :: String -> FlatState -> Wish String String
 useSpiritGum = (version, state) => {
-  { codeOnly, input, output, explicitCodeBoundaries: exclusive } = state
+  { madmarker, codeOnly, input, output, explicitCodeBoundaries: exclusive } = state
+  IO.pTrace("DODODOD", madmarker)
   return pipe(
     VFile.fromPath(input, rules),
     Wish.mapRej(K("Unable to process virtual file")),
@@ -50,11 +55,13 @@ useSpiritGum = (version, state) => {
       where {
         VFile.ConcreteFile(a, b, c) =>
           do {
+            IO.pTrace("IOIOI!OI!OI!", b)
+            lines = c.isLibrary ? b : List.append(Line.VirtualLine("}"), b)
             boundChecker = Boundary.checkBoundariesForIndex(c.boundaries)
             return Template.renderWithConverter(
-              map(Printer.renderSoloLine(boundChecker, exclusive, codeOnly)),
+              map(Printer.renderSoloLine(c.madmarker, boundChecker, exclusive, codeOnly)),
               resolveAndPrint(#[version, state]),
-            )(VFile.ConcreteFile(a, b, c))
+            )(VFile.ConcreteFile(a, lines, c))
           }
       },
     ),

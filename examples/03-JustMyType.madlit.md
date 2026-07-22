@@ -1,3 +1,9 @@
+---
+IO
+List: List
+Just |: Maybe
+---
+
 Types are where Madlib really shines.
 
 If you've worked in Haskell before, these are _mostly_ the same types you're used to. See [[Coming from Haskell]] for a brief overview of the differences.
@@ -77,6 +83,7 @@ type Listable a = Entry(a) | Magic
 
 Now we can use numbers how we'd expect
 
+***
 ```madlib#using-magic.final!
 list = [Entry(1), Magic, Entry(2), Magic, Magic, Entry(3)]
 ```
@@ -89,12 +96,11 @@ syntaxError = ["this is invalid", 1]
 
 This is a feature, not a bug. Mixed lists are an abomination. We will go over ways of encapsulating types in a future guide.
 
-***
 
 How do we complete the `gapFill` function above using Madlib?
 
 ```madlib#fillable-gaps-in-functional-form
-gapFill :: List (Listable a) -> List (Listable a)
+gapFill :: List (Listable a) -> List a
 gapFill = (xs) = List.reduce(
   (agg, x) => where (x) {
     Entry(_x) => [...agg, _x]
@@ -105,14 +111,24 @@ gapFill = (xs) = List.reduce(
 
 Additionally, since our `Listable` type only has two constructors, we can use a single underscore to represent "any other case".
 
-```madlib#fillable-gaps-in-functional-form.v2
-gapFill :: List (Listable a) -> List (Listable a)
-gapFill = (xs) = List.reduce(
-  (agg, x) => where (x) {
-    Entry(_x) => [...agg, _x]
-    _ => [...agg, List.last(agg)]
-  }
+```madlib#fillable-gaps-in-functional-form.v2!
+
+gapFill :: List (Listable a) -> List a
+gapFill = (xs) => List.reduce(
+  (agg, x) => where(x) {
+    Entry(_x) => List.append(_x, agg)
+
+    _ => where(List.last(agg)) {
+      Just(end) => List.append(end, agg)
+      _ => agg
+    }
+  },
+  [],
+  xs,
 )
+
+IO.pTrace("YO", gapFill(list))
+
 ```
 
 

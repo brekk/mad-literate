@@ -1,4 +1,5 @@
 import Fn from "Function"
+import IO from "IO"
 import List from "List"
 import { fromMaybe } from "Maybe"
 import Tuple from "Tuple"
@@ -18,6 +19,7 @@ export _findMadmarker = Transformer.ofBodyRaw(
         List.find(
           pipe(
             Tuple.snd,
+            IO.pTrace("YOYOY"),
             Fn.equals(MAD_MARKER),
           ),
         ),
@@ -26,7 +28,8 @@ export _findMadmarker = Transformer.ofBodyRaw(
       )(lines),
     },
     // wrap non library files with a closing curly
-    meta.isLibrary ? lines : [...lines, #[List.length(lines) + 1, INDENT ++ "}"]],
+    // meta.isLibrary ? lines : [...lines, #[List.length(lines) + 1, "}"]],
+    lines,
   ],
 )
 export rule = Rule.bodyRule(false, "mad-literate/madmarker/body", [], [_findMadmarker])

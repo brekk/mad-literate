@@ -1,8 +1,11 @@
 import ExplicitCode from "@/Rule/ExplicitCode"
 import HeadContent from "@/Rule/HeadContent"
 import MainBody from "@/Rule/MainBody"
-import MainLine from "@/Rule/MainLine"
 
 
 
-export rules = [HeadContent.rule, MainBody.rule, MainLine.rule, ExplicitCode.rule]
+// import MainLine from "@/Rule/MainLine"
+
+
+
+export rules = [HeadContent.rule, MainBody.rule, ExplicitCode.rule]
