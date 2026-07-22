@@ -79,21 +79,8 @@ import Dict from "Dictionary"
 
 filterById :: List TripleCode -> List TripleCode
 filterById = (codes) => {
-  _getNames = (out, _keys) => where(_keys) {
-    [] =>
-      out
-
-    [x, ...xs] =>
-      where(x.entry) {
-        Just({ channels, isDefault, name }) =>
-          _getNames(Set.insert(name, out), xs)
-
-        _ =>
-          _getNames(out, xs)
-      }
-  }
-  names = _getNames(Set.empty, codes)
-  _getDefaultOrLast = (out, _keys) => where(_keys) {
+  filtro :: Dictionary String Boolean -> List TripleCode -> Dictionary String Boolean
+  filtro = (out, _keys) => where(_keys) {
     [] =>
       out
 
@@ -101,23 +88,23 @@ filterById = (codes) => {
       where(x.entry) {
         Just({ channels, isDefault, name }) =>
           if (isDefault) {
-            _getDefaultOrLast(Dict.insert(name, isDefault, out), xs)
+            filtro(Dict.insert(name, isDefault, out), xs)
           } else if (
             pipe(
               Dict.get(name),
               Maybe.fromMaybe(false),
             )(out)
           ) {
-            _getDefaultOrLast(Dict.insert(name, false, out), xs)
+            filtro(Dict.insert(name, false, out), xs)
           } else {
-            _getDefaultOrLast(out, xs)
+            filtro(out, xs)
           }
 
         _ =>
-          _getDefaultOrLast(out, xs)
+          filtro(out, xs)
       }
   }
-  raw = _getDefaultOrLast(Dict.empty, codes)
+  raw = filtro(Dict.empty, codes)
   IO.pTrace("RAWS", raw)
   return codes
 }
