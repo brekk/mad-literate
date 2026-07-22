@@ -10,3 +10,4 @@ madlit
  - cli:input
  - cli:state
  - cli:detail
+ - codeBoundary

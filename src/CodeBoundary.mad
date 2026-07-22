@@ -6,7 +6,9 @@ import Set from "Set"
 import String from "String"
 import Tuple from "Tuple"
 
+import { VOID } from "@/Constants"
 import _Fn from "@/Function"
+import Log from "@/Log"
 import _String from "@/String"
 
 
@@ -45,6 +47,23 @@ import { Just, Nothing } from "Maybe"
 
 
 alias Block = { channels :: List String, isDefault :: Boolean, name :: String }
+export alias TripleCode = { end :: Integer, entry :: Maybe Block, start :: Integer }
+nameOrEmpty = pipe(
+  map(.name),
+  Maybe.fromMaybe(""),
+)
+getBlockName = pipe(
+  .entry,
+  nameOrEmpty,
+)
+isDefaultOrFalse = pipe(
+  map(.isDefault),
+  Maybe.fromMaybe(false),
+)
+isDefaultBlock = pipe(
+  .entry,
+  isDefaultOrFalse,
+)
 madlibCodeBlock :: String -> Maybe Block
 export madlibCodeBlock = pipe(
   _String.tickMedicine,
@@ -66,7 +85,6 @@ export madlibCodeBlock = pipe(
     K(Nothing),
   ),
 )
-export alias TripleCode = { end :: Integer, entry :: Maybe Block, start :: Integer }
 excludeNothing = List.filter(
   pipe(
     .entry,
@@ -87,10 +105,12 @@ filterById = (codes) => {
     [x, ...xs] =>
       where(x.entry) {
         Just({ channels, isDefault, name }) =>
-          if (isDefault) {
+          if (name == VOID) {
+            filtro(out, xs)
+          } else if (isDefault) {
             filtro(Dict.insert(name, isDefault, out), xs)
           } else if (
-            pipe(
+            !pipe(
               Dict.get(name),
               Maybe.fromMaybe(false),
             )(out)
@@ -104,9 +124,16 @@ filterById = (codes) => {
           filtro(out, xs)
       }
   }
-  raw = filtro(Dict.empty, codes)
-  IO.pTrace("RAWS", raw)
-  return codes
+  lookup = filtro(Dict.empty, codes)
+  return List.filter(
+    (x) => {
+      name = getBlockName(x)
+      def = isDefaultBlock(x)
+      ref = Dict.get(name, lookup)
+      return (Maybe.isJust(ref) && def)
+    },
+    codes,
+  )
 }
 getBoxMap :: List #[Integer, String] -> List TripleCode
 getBoxMap = pipe(
@@ -129,18 +156,24 @@ getBoxMap = pipe(
   .out,
   /* throw away the results that aren't Madlib code blocks */
   excludeNothing,
-  filterById,
 )
 boxlog = _Fn.once(IO.pTrace("BOXMAPS"))
 checkBoundariesForIndex :: List #[Integer, String] -> Integer -> Boolean
 export checkBoundariesForIndex = (pairs, i) => pipe(
   getBoxMap,
-  excludeNothing,
   boxlog,
-  List.any(
-    ({ start, end, entry }) => {
-      matched = start <= i && i <= end
-      return matched
-    },
-  ),
+  (list) => {
+    return List.any(
+      ({ start, end, entry }) => {
+        matched = start <= i && i <= end
+
+        deft = isDefaultOrFalse(entry)
+        if (matched && !deft) do {
+          Log.env.codeBoundary("matched with no default", nameOrEmpty(entry))
+        }
+        return matched && deft
+      },
+      list,
+    )
+  },
 )(pairs)

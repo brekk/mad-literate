@@ -10,7 +10,7 @@ export _processMadmarker = Transformer.ofLine(
     hasMadmarker = meta.madmarker > -1
     return if (!meta.isLibrary && hasMadmarker && line == MAD_MARKER) {
       // transform the madmarker into a main
-      INDENT ++ MAIN_START
+      MAIN_START
     } else {
       line
     }

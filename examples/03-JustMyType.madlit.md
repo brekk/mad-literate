@@ -4,7 +4,6 @@ If you've worked in Haskell before, these are _mostly_ the same types you're use
 
 There is also a [[Coming From JavaScript]] page. If you're coming from TypeScript, welcome! You have a lot to unlearn.
 
-***
 
 # Types
 
@@ -26,6 +25,7 @@ const gapFill = (xs) => xs.reduce(
 // fill some gaps
 const filled = gapFill([1, MAGIC, 2, MAGIC, MAGIC, 3, MAGIC])
 console.log("FILLED", filled)
+
 ```
 
 JS is fine with this, anything can be compared to anything, whatever might equal whatever, deal with the problem at runtime.
@@ -83,11 +83,13 @@ list = [Entry(1), Magic, Entry(2), Magic, Magic, Entry(3)]
 
 However, unlike JavaScript, you can't have a mixed list:
 
-```madlib#__void__
+```madlib#_
 syntaxError = ["this is invalid", 1]
 ```
 
 This is a feature, not a bug. Mixed lists are an abomination. We will go over ways of encapsulating types in a future guide.
+
+***
 
 How do we complete the `gapFill` function above using Madlib?
 

@@ -19,6 +19,7 @@ export tags = {
   cliInput: Party.tagWithScope("madlit", ["cli", "input"]),
   cliState: Party.tagWithScope("madlit", ["cli", "state"]),
   cliDetail: Party.tagWithScope("madlit", ["cli", "detail"]),
+  codeBoundary: Party.tagWithScope("madlit", ["codeBoundary"]),
 }
 export env = {
   madlit: Party.env(tags.madlit),
@@ -33,6 +34,7 @@ export env = {
   cliInput: Party.env(tags.cliInput),
   cliState: Party.env(tags.cliState),
   cliDetail: Party.env(tags.cliDetail),
+  codeBoundary: Party.env(tags.codeBoundary),
 }
 export tapped = {
   madlit: Party.tap(env.madlit),
@@ -47,4 +49,5 @@ export tapped = {
   cliInput: Party.tap(env.cliInput),
   cliState: Party.tap(env.cliState),
   cliDetail: Party.tap(env.cliDetail),
+  codeBoundary: Party.tap(env.codeBoundary),
 }
