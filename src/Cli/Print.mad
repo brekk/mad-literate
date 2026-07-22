@@ -33,7 +33,7 @@ map(
 
 killMadTicks = pipe(
   _String.tickMedicine,
-  Fn.when(Fn.equals("madlib"), K("")),
+  Fn.when(String.startsWith("madlib"), K("")),
 )
 slam = (codeOnly, y) => codeOnly ? "" : mappend(COMMENT ++ " ", y)
 exclusiveMatch = (sclusy, match, y) => !sclusy && !String.startsWith(match, y)

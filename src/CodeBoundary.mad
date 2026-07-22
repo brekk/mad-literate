@@ -2,6 +2,7 @@ import Fn from "Function"
 import IO from "IO"
 import List from "List"
 import Maybe from "Maybe"
+import Set from "Set"
 import String from "String"
 import Tuple from "Tuple"
 
@@ -10,13 +11,128 @@ import _String from "@/String"
 
 
 
-export alias TripleCode = { end :: Integer, entry :: String, start :: Integer }
+/**
+# Explicit code boundaries!
+
+// basic : renders in place
+```madlib
+
+// with id : renders in place
+```madlib#example
+```madlib#id-no-spaces
+
+// with repeated id and index : only render one (implied rendering index is the last one)
+```madlib#id-no-spaces.0
+```madlib#id-no-spaces.1
+```madlib#id-no-spaces.2
+
+// wth repeated id and index : doesn't need to be a number, because it's not
+```madlib#declaration.one
+```madlib#declaration.two
+```madlib#declaration.arbitrary-whatever
+
+
+// with repeated id and index: explicitly render (!) index "equalTo"
+```madlib#deriving-comparable.lessThan
+```madlib#deriving-comparable.equalTo!
+```madlib#deriving-comparable.greaterThan
+
+
+*/
+K = Fn.always
+import { Just, Nothing } from "Maybe"
+
+
+
+alias Block = { channels :: List String, isDefault :: Boolean, name :: String }
+madlibCodeBlock :: String -> Maybe Block
+export madlibCodeBlock = pipe(
+  _String.tickMedicine,
+  Fn.ifElse(
+    String.startsWith("madlib"),
+    pipe(
+      String.drop(String.length("madlib")),
+      Fn.when(String.startsWith("#"), String.drop(1)),
+      String.split("."),
+      (parts) => {
+        name = List.first(parts) ?? ""
+        channels = List.drop(1, parts)
+        z = List.last(parts) ?? ""
+        isDefault = String.endsWith("!", z)
+        return Just({ isDefault, name, channels })
+      },
+    ),
+    /* currently we treat non madlib code blocks as fully opaque */
+    K(Nothing),
+  ),
+)
+export alias TripleCode = { end :: Integer, entry :: Maybe Block, start :: Integer }
+excludeNothing = List.filter(
+  pipe(
+    .entry,
+    Maybe.isJust,
+  ),
+)
+import Dict from "Dictionary"
+
+
+
+filterById :: List TripleCode -> List TripleCode
+filterById = (codes) => {
+  _getNames = (out, _keys) => where(_keys) {
+    [] =>
+      out
+
+    [x, ...xs] =>
+      where(x.entry) {
+        Just({ channels, isDefault, name }) =>
+          _getNames(Set.insert(name, out), xs)
+
+        _ =>
+          _getNames(out, xs)
+      }
+  }
+  names = _getNames(Set.empty, codes)
+  _getDefaultOrLast = (out, _keys) => where(_keys) {
+    [] =>
+      out
+
+    [x, ...xs] =>
+      where(x.entry) {
+        Just({ channels, isDefault, name }) =>
+          if (isDefault) {
+            _getDefaultOrLast(Dict.insert(name, isDefault, out), xs)
+          } else if (
+            pipe(
+              Dict.get(name),
+              Maybe.fromMaybe(false),
+            )(out)
+          ) {
+            _getDefaultOrLast(Dict.insert(name, false, out), xs)
+          } else {
+            _getDefaultOrLast(out, xs)
+          }
+
+        _ =>
+          _getDefaultOrLast(out, xs)
+      }
+  }
+  raw = _getDefaultOrLast(Dict.empty, codes)
+  IO.pTrace("RAWS", raw)
+  return codes
+}
 getBoxMap :: List #[Integer, String] -> List TripleCode
 getBoxMap = pipe(
   List.reduce(
     (agg, #[end, x]) => where(agg.prev) {
       Maybe.Just(#[start, entry]) =>
-        ({ ...agg, out: [...agg.out, { start, end, entry }], prev: Maybe.Nothing })
+        (
+          {
+            ...agg,
+            out: [...agg.out, { start, end, entry: madlibCodeBlock(entry) }],
+            prev: Maybe.Nothing,
+          }
+        )
 
       _ =>
         ({ ...agg, prev: Maybe.Just(#[end, x]) })
@@ -24,18 +140,15 @@ getBoxMap = pipe(
     { out: [], prev: Maybe.Nothing },
   ),
   .out,
+  /* throw away the results that aren't Madlib code blocks */
+  excludeNothing,
+  filterById,
 )
 boxlog = _Fn.once(IO.pTrace("BOXMAPS"))
 checkBoundariesForIndex :: List #[Integer, String] -> Integer -> Boolean
 export checkBoundariesForIndex = (pairs, i) => pipe(
   getBoxMap,
-  List.filter(
-    pipe(
-      .entry,
-      _String.tickMedicine,
-      String.startsWith("madlib"),
-    ),
-  ),
+  excludeNothing,
   boxlog,
   List.any(
     ({ start, end, entry }) => {
