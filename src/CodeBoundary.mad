@@ -1,3 +1,4 @@
+import Dict from "Dictionary"
 import Fn from "Function"
 import IO from "IO"
 import List from "List"
@@ -91,10 +92,6 @@ excludeNothing = List.filter(
     Maybe.isJust,
   ),
 )
-import Dict from "Dictionary"
-
-
-
 filterById :: List TripleCode -> List TripleCode
 filterById = (codes) => {
   filtro :: Dictionary String Boolean -> List TripleCode -> Dictionary String Boolean

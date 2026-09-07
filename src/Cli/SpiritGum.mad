@@ -47,7 +47,7 @@ superSaiyan = (path, lines, state) => {}
 useSpiritGum :: String -> FlatState -> Wish String String
 useSpiritGum = (version, state) => {
   { madmarker, codeOnly, input, output, explicitCodeBoundaries: exclusive } = state
-  IO.pTrace("DODODOD", madmarker)
+  // IO.pTrace("DODODOD", madmarker)
   return pipe(
     VFile.fromPath(input, rules),
     Wish.mapRej(K("Unable to process virtual file")),
@@ -55,7 +55,6 @@ useSpiritGum = (version, state) => {
       where {
         VFile.ConcreteFile(a, b, c) =>
           do {
-            IO.pTrace("IOIOI!OI!OI!", b)
             lines = c.isLibrary ? b : List.append(Line.VirtualLine("}"), b)
             boundChecker = Boundary.checkBoundariesForIndex(c.boundaries)
             return Template.renderWithConverter(

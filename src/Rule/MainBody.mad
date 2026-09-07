@@ -19,7 +19,6 @@ export _findMadmarker = Transformer.ofBodyRaw(
         List.find(
           pipe(
             Tuple.snd,
-            IO.pTrace("YOYOY"),
             Fn.equals(MAD_MARKER),
           ),
         ),

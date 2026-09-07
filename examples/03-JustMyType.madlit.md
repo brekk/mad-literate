@@ -1,135 +1,166 @@
 ---
-IO
+IO: IO
 List: List
 Just |: Maybe
 ---
 
 Types are where Madlib really shines.
 
-If you've worked in Haskell before, these are _mostly_ the same types you're used to. See [[Coming from Haskell]] for a brief overview of the differences.
+If you've worked in Haskell before, these are _mostly_ the same types you're used to. See [[Coming from Haskell]] for a brief overview of the differences. There is also a [[Coming From JavaScript]] page.
 
-There is also a [[Coming From JavaScript]] page. If you're coming from TypeScript, welcome! You have a lot to unlearn.
-
+For the built-in types of [[Prelude]], there are a number of more specific pages you can peruse; for this document we'll primarily talk about custom / user-defined types, and aliases, which are effectively a shorthand for referencing types.
 
 # Types
 
-Ok, so types are pretty magical. Let's go over some examples.
+First we'll give a few examples of some custom type definitions to give you a feel for the versatility and expressiveness of this:
 
-In something like JavaScript, you might well have a "magic" value that you compare things to while doing logic, and do different logic if that magic value is found.
-
-```js
-const MAGIC = '__magic_value_do_not_use__'
-const gapFill = (xs) => xs.reduce(
-  (agg, x) => [
-    ...agg,
-    x === MAGIC
-      ? agg[agg.length - 1]
-      : x
-  ],
-  []
-)
-// fill some gaps
-const filled = gapFill([1, MAGIC, 2, MAGIC, MAGIC, 3, MAGIC])
-console.log("FILLED", filled)
-
+```madlib
+type Whatever = Whatever
+type Reference = Unknown | Known(String)
+type Color = Hex(String) | RGB(Integer, Integer, Integer)
+export Suit = Hearts | Diamonds | Spades | Clubs
+export type Card = Card(Suit, Integer)
+type Character a b = Character(String, String, List a, b)
 ```
 
-JS is fine with this, anything can be compared to anything, whatever might equal whatever, deal with the problem at runtime.
+Now we'll break down these examples:
 
-Madlib aims to fix this by using a strongly typed system that doesn't allow for variadic inputs, nor mixed types.
+## Syntax
 
-We can define our own `Magic` type.
+Let's break down how we define a type.
 
-For the above, we need some way of expressing a value that is special. We could try something like:
+1. A type can define a single constructor, which must start with a capital letter, e.g. `type TypeName = Constructor` defines a Constructor named constructor of type TypeName
+2. A type can define multiple constructors, which must start with a capital letter, e.g. `type Critter = Bug | Creepy | Crawly` defines a type Critter which has three singleton constructors, "Bug", "Creepy" and "Crawly"
+3. A type can contain other types. These can be [[literal types]], e.g. `type Receipt = Receipt(Integer)`
+4. A type can contain other types. These can be type variables, e.g. `type Order a = Order(Integer, a)`
+5. A type can contain other types, e.g. `type Order a = Order(Integer, List a)`. This includes custom types: `type Superorder = Superorder(Integer, List (Order a))`.
+6. A type can optionally be exported, which makes it usable outside of the file it is defined in, using the `export` keyword, e.g. `export type Type = Constructor`
 
-```madlib#declaration-magic.attempt-one
-type Magic = Magic
+## Constructors
+
+Constructors are formal values which represent a concrete type that the compiler understands.
+
+## Singleton
+
+A type constructor can have zero to many values within it. A type constructor with zero values is called a singleton. 
+
+We can use a singleton to express something which might otherwise be a representative literal in other languages as a full type:
+
+```madlib#singleton
+type Cycle = Day | Night | Dusk
+type Arachnid = Spider | Scorpion | Tick | Mite | Other
 ```
 
-But this would only allow us to work with Magic as a discrete value. ☝ The above expression effectively says to the compiler "There is a new type called `Magic`. It has only one constructor, which takes no arguments and is a singleton — this constructor is also named `Magic`".
-
-In order to make this a more useful value, we can create what's called a discriminated union:
-
-
-```madlib#declaration-magic.attempt-two
-type Listable = Entry | Magic
+This allows us to express the types in [[type signatures]], such as:
+```madlib
+isSpider :: Arachnid -> Boolean
+isSpider = where {
+  Spider => true
+  _ => false
+}
 ```
 
-The above effectively says to the compiler: "There is a new type called `Listable`. It has two constructors, both singletons, named `Entry` and `Magic`"
+Note that we're using the name of the type ("Arachnid") here rather than one of the constructors. The type should be used in signatures. The constructors should be used in code.
 
-However, we still don't have a way of dealing with natural values yet, so we need to add some value _inside_ the Entry constructor. Otherwise, when we create a list, we will only have the options above:
 
-```madlib#using-magic.attempt-two
-list = [Entry, Magic, Entry, Magic, Magic]
+## Container types
+
+Unlike a singleton, a container type constructor has values within it. Thus it can have many different instances. These interior values can be types or type variables. 
+
+### Container types with literal values
+
+```madlib
+type Ingredient = Ingredient(String, Integer)
+type Pizza = Pizza(String, List Ingredient)
 ```
 
-That's easy to fix, we can define a Listable which is either a wrapped String or the magic value:
 
-```madlib#declaration-magic.attempt-three
-type Listable = Entry(String) | Magic
+We have to pass these values to the constructor in order to create the instance.
+
+```madlib
+redSauce = Ingredient("Tomato Sauce", 0.3)
+pestoSauce = Ingredient("Pesto", 0.3)
+cheese = Ingredient("Mozzarella Cheese", 0.5)
+pepperoni = Ingredient("Pepperoni", 4)
+corn = Ingredient("Corn", 0.23)
+habanero = Ingredient("Habanero", 2)
+
+pizzaCheese = Pizza("Cheese", [redSauce, cheese])
+pizzaPesto = Pizza("Pesto Pie", [pesto, cheese])
+pizzaHotPeppercorn = Pizza("Hot Peppercorn", [cheese, pepperoni, corn, habanero])
 ```
 
-Now we have a working value, if we wanted to we could write
+We can use `where` to access these interior values (or similar sugar).
 
-```madlib#using-magic.attempt-three
-list = [Entry("1"), Magic]
+```madlib
+ingredientName :: Ingredient -> String
+ingredientName = where {
+  Ingredient(_name, _) => _name
+}
+
+ingredientCost :: Ingredient -> Integer
+ingredientCost = where {
+  Ingredient(_, _cost) => _cost
+}
+
+pizzaName :: Pizza -> String
+pizzaName = where {
+  Pizza(_name, _) => _name
+}
+
+pizzaIngredients :: Pizza -> List Ingredients
+pizzaIngredients = where {
+  Pizza(_, _ing) => _ing
+}
 ```
 
-However, the original example allows uses number literals, not strings, so how can we make that change? **By adding a type variable**.
+### Container types with type variables
 
-```madlib#declaration-magic.final!
-type Listable a = Entry(a) | Magic
+We can also define container types with a type variable, which allows us to define polymorphic types. (We can also constrain these variables, but that is beyond the scope of this document.)
+
+```madlib
+type Box a = Box(a)
+type Relation a b = Orthogonal(b) | Related(a)
 ```
 
-Now we can use numbers how we'd expect
-
-***
-```madlib#using-magic.final!
-list = [Entry(1), Magic, Entry(2), Magic, Magic, Entry(3)]
+We can create instances like so:
+```madlib
+shipping = Box("balikbayan")
+bento = Box("lunch")
+unrelated = Orthogonal("Irrelevant")
+unrelatedYear = Orthogonal(2020)
 ```
 
-However, unlike JavaScript, you can't have a mixed list:
-
+It is invalid to attempt to mix types. For instance, given the above
 ```madlib#_
-syntaxError = ["this is invalid", 1]
+list = [unrelated, unrelatedYear]
 ```
 
-This is a feature, not a bug. Mixed lists are an abomination. We will go over ways of encapsulating types in a future guide.
+Will create a type error. This is because we've defined a value with a single value `b` for the Orthogonal constructor. It can either be a String or an Integer, but not both.  
 
+However, because of how we've defined it, we _can_ have a list of values that are different type variables:
 
-How do we complete the `gapFill` function above using Madlib?
+```madlib
+list2 = [Orthogonal(200), Related("strongly")]
+```
 
-```madlib#fillable-gaps-in-functional-form
-gapFill :: List (Listable a) -> List a
-gapFill = (xs) = List.reduce(
-  (agg, x) => where (x) {
-    Entry(_x) => [...agg, _x]
-    Magic => [...agg, List.last(agg)]
-  }
+This is because, per the `Relation` type's definition, in `list2`, `b` is an Integer, and `a` is a String.
+
+#### Challenge
+
+Can you define a function named `pizzaCost` that leverages the above functions to get the cost of a pizza based on its ingredients?
+
+```madlib
+pizzaCost = pipe(
+  pizzaIngredients,
+  map(ingredientCost),
+  List.reduce((a, b) => a + b, 0)
 )
 ```
 
-Additionally, since our `Listable` type only has two constructors, we can use a single underscore to represent "any other case".
 
-```madlib#fillable-gaps-in-functional-form.v2!
 
-gapFill :: List (Listable a) -> List a
-gapFill = (xs) => List.reduce(
-  (agg, x) => where(x) {
-    Entry(_x) => List.append(_x, agg)
-
-    _ => where(List.last(agg)) {
-      Just(end) => List.append(end, agg)
-      _ => agg
-    }
-  },
-  [],
-  xs,
-)
-
-IO.pTrace("YO", gapFill(list))
-
-```
+A commonly used type in Prelude is [[Maybe|Nothing]], which we use to express one of two possible / "maybe" values: `type Maybe a = Just(a) | Nothing`. [[Maybe|Nothing]] is a singleton. [[Maybe|Just]] is a container type.
 
 
 ## Summary
