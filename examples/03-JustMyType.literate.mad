@@ -10,142 +10,64 @@ import { Just } from "Maybe"
 
 //  Types are where Madlib really shines.
 
-//  If you've worked in Haskell before, these are _mostly_ the same types you're used to. See [[Coming from Haskell]] for a brief overview of the differences.
+//  If you've worked in Haskell before, these are _mostly_ the same types you're used to. See [Coming from Haskell](Coming%20from%20Haskell) for a brief overview of the differences. There is also a [Coming From JavaScript](How-To%20Guides/Coming%20From%20JavaScript.md) page.
 
-//  There is also a [[Coming From JavaScript]] page. If you're coming from TypeScript, welcome! You have a lot to unlearn.
+//  For the built-in types of [Prelude](Prelude), there are a number of more specific pages you can peruse; for this document we'll primarily talk about custom / user-defined types, and aliases, which are effectively a shorthand for referencing types.
 
 
 //  # Types
 
-//  Ok, so types are pretty magical. Let's go over some examples.
-
-//  In something like JavaScript, you might well have a "magic" value that you compare things to while doing logic, and do different logic if that magic value is found.
-
-//  ```js
-//  const MAGIC = '__magic_value_do_not_use__'
-//  const gapFill = (xs) => xs.reduce(
-//    (agg, x) => [
-//      ...agg,
-//      x === MAGIC
-//        ? agg[agg.length - 1]
-//        : x
-//    ],
-//    []
-//  )
-//  // fill some gaps
-//  const filled = gapFill([1, MAGIC, 2, MAGIC, MAGIC, 3, MAGIC])
-//  console.log("FILLED", filled)
-
-//  ```
-
-//  JS is fine with this, anything can be compared to anything, whatever might equal whatever, deal with the problem at runtime.
-
-//  Madlib aims to fix this by using a strongly typed system that doesn't allow for variadic inputs, nor mixed types.
-
-//  We can define our own `Magic` type.
-
-//  For the above, we need some way of expressing a value that is special. We could try something like:
-
-//  ```madlib#declaration-magic.attempt-one
-//  type Magic = Magic
-//  ```
-
-//  But this would only allow us to work with Magic as a discrete value. ☝ The above expression effectively says to the compiler "There is a new type called `Magic`. It has only one constructor, which takes no arguments and is a singleton — this constructor is also named `Magic`".
-
-//  In order to make this a more useful value, we can create what's called a discriminated union:
+//  First we'll give a few examples of some custom type definitions
 
 
-//  ```madlib#declaration-magic.attempt-two
-//  type Listable = Entry | Magic
-//  ```
+type Whatever = Whatever
+type Reference = Unknown | Known(String)
+type Color = Hex(String) | RGB(Integer, Integer, Integer)
+export type Suit = Hearts | Diamonds | Spades | Clubs
+export type Card = Card(Suit, Integer)
+type Character a b = Character(String, String, List a, b)
+//  Now we'll break down these examples:
 
-//  The above effectively says to the compiler: "There is a new type called `Listable`. It has two constructors, both singletons, named `Entry` and `Magic`"
+//  ## Syntax
 
-//  However, we still don't have a way of dealing with natural values yet, so we need to add some value _inside_ the Entry constructor. Otherwise, when we create a list, we will only have the options above:
+//  Let's break down how we define a type.
 
-//  ```madlib#using-magic.attempt-two
-//  list = [Entry, Magic, Entry, Magic, Magic]
-//  ```
+//  1. A type can define a single constructor, which must start with a capital letter, e.g. `type TypeName = Constructor` defines a Constructor named constructor of type TypeName
+//  2. A type can define multiple constructors, which must start with a capital letter, e.g. `type Critter = Bug | Creepy | Crawly` defines a type Critter which has three singleton constructors, "Bug", "Creepy" and "Crawly"
+//  3. A type can contain values. These can be [literals](literals), e.g. `type Receipt = Receipt(Integer)`
+//  4. A type can contain values. These can be type variables, e.g. `type Order a = Order(Integer, a)`
+//  5. A type can contain other types, e.g. `type Order a = Order(Integer, List a)`
+//  6. A type can optionally be exported, using the `export` keyword, e.g. `export type Type = Constructor`
 
-//  That's easy to fix, we can define a Listable which is either a wrapped String or the magic value:
+//  ## Constructors
 
-//  ```madlib#declaration-magic.attempt-three
-//  type Listable = Entry(String) | Magic
-//  ```
+//  ### Singleton Type Constructors
 
-//  Now we have a working value, if we wanted to we could write
+//  A type constructor can have zero to many values within it. A type constructor with zero values is called a singleton / singleton constructor. One very commonly used singleton instance in [Prelude](Prelude) is `Nothing`, of the `Maybe` type — it can allow us to model things so that only valid cases will execute, e.g. `map(Math.add(5), Just(3))` will add 5 given a `Just`, but will do nothing given a `Nothing`, which makes it useful for things like user inputs or defaults.
 
-//  ```madlib#using-magic.attempt-three
-//  list = [Entry("1"), Magic]
-//  ```
+//  ### Type Constructors
 
-//  However, the original example allows uses number literals, not strings, so how can we make that change? **By adding a type variable**.
-
-
-type Listable a = Entry(a) | Magic
-//  Now we can use numbers how we'd expect
-
-main = () => {
-  list = [
-    Entry(1),
-    Magic,
-    Entry(2),
-    Magic,
-    Magic,
-    Entry(3),
-  //  However, unlike JavaScript, you can't have a mixed list:
-  ]
+//  Many type constructors contain values. This allows the constructed type to encapsulate more complex values while being passed around as a concrete value, e.g.
 
 
+type Page = Page(String, String)
+type Example = BadRef | Link(Page, String) | Demo(Page, String)
+//  We can create an instance of `Page` by invoking its only type constructor, eponymously named `Page`: `p = Page("Title of Page", "Page Content")`. If we want to create an `Example` type, we have to use `BadRef` or `Link` or `Demo`. Sometimes this pattern engenders confusion at first. The left side of the assignment operator is the name of the type. The right side of the assignment of the operator contains the type constructors, which can be one to many. Similarly, each type constructor can contain one to many literal values.
+
+//  ### Type Variables
+
+//  We sometimes want to bind the type constructor to a variable type. For instance, the `List` type is one such constructor. You can have a list of integers or a list of strings, but because it's defined as a type constructor of `List a`, you cannot have a mixed list, as that would violate the specificity of `a`.
+
+//  Here's a simple example with a custom type:
 
 
-  //  ```madlib#_
-  //  syntaxError = ["this is invalid", 1]
-  //  ```
+type Item a = Item(String, a)
+coolNice = Item("cool", Just("nice"))
+//  ## Summary
+//  - Types
+//  - Type Inference
+//  - Literal Types
+//  - Aliases
+//  - Pipe & Curry
 
-  //  This is a feature, not a bug. Mixed lists are an abomination. We will go over ways of encapsulating types in a future guide.
-
-
-  //  How do we complete the `gapFill` function above using Madlib?
-
-  //  ```madlib#fillable-gaps-in-functional-form
-  //  gapFill :: List (Listable a) -> List a
-  //  gapFill = (xs) = List.reduce(
-  //    (agg, x) => where (x) {
-  //      Entry(_x) => [...agg, _x]
-  //      Magic => [...agg, List.last(agg)]
-  //    }
-  //  )
-  //  ```
-
-  //  Additionally, since our `Listable` type only has two constructors, we can use a single underscore to represent "any other case".
-
-
-
-  gapFill :: List (Listable a) -> List a
-  gapFill = (xs) => List.reduce(
-    (agg, x) => where(x) {
-      Entry(_x) =>
-        List.append(_x, agg)
-
-      _ =>
-        where(List.last(agg)) {
-          Just(end) =>
-            List.append(end, agg)
-
-          _ =>
-            agg
-        }
-    },
-    [],
-    xs,
-  )
-
-  IO.pTrace("YO", gapFill(list))
-  //  ## Summary
-  //  - Types
-  //  - Type Inference
-  //  - Literal Types
-  //  - Aliases
-  //  - Pipe & Curry
-}
+main = () => {}

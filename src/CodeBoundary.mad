@@ -47,7 +47,7 @@ import { Just, Nothing } from "Maybe"
 
 
 
-alias Block = { channels :: List String, isDefault :: Boolean, name :: String }
+alias Block = { channels :: List String, isExplicit :: Boolean, name :: String }
 export alias TripleCode = { end :: Integer, entry :: Maybe Block, start :: Integer }
 nameOrEmpty = pipe(
   map(.name),
@@ -57,13 +57,13 @@ getBlockName = pipe(
   .entry,
   nameOrEmpty,
 )
-isDefaultOrFalse = pipe(
-  map(.isDefault),
+isExplicitOrFalse = pipe(
+  map(.isExplicit),
   Maybe.fromMaybe(false),
 )
-isDefaultBlock = pipe(
+isExplicitBlock = pipe(
   .entry,
-  isDefaultOrFalse,
+  isExplicitOrFalse,
 )
 madlibCodeBlock :: String -> Maybe Block
 export madlibCodeBlock = pipe(
@@ -78,8 +78,8 @@ export madlibCodeBlock = pipe(
         name = List.first(parts) ?? ""
         channels = List.drop(1, parts)
         z = List.last(parts) ?? ""
-        isDefault = String.endsWith("!", z)
-        return Just({ isDefault, name, channels })
+        isExplicit = String.endsWith("!", z)
+        return Just({ isExplicit, name, channels })
       },
     ),
     /* currently we treat non madlib code blocks as fully opaque */
@@ -101,11 +101,11 @@ filterById = (codes) => {
 
     [x, ...xs] =>
       where(x.entry) {
-        Just({ channels, isDefault, name }) =>
+        Just({ channels, isExplicit, name }) =>
           if (name == VOID) {
             filtro(out, xs)
-          } else if (isDefault) {
-            filtro(Dict.insert(name, isDefault, out), xs)
+          } else if (isExplicit) {
+            filtro(Dict.insert(name, isExplicit, out), xs)
           } else if (
             !pipe(
               Dict.get(name),
@@ -125,7 +125,7 @@ filterById = (codes) => {
   return List.filter(
     (x) => {
       name = getBlockName(x)
-      def = isDefaultBlock(x)
+      def = isExplicitBlock(x)
       ref = Dict.get(name, lookup)
       return (Maybe.isJust(ref) && def)
     },
@@ -164,11 +164,13 @@ export checkBoundariesForIndex = (pairs, i) => pipe(
       ({ start, end, entry }) => {
         matched = start <= i && i <= end
 
-        deft = isDefaultOrFalse(entry)
-        if (matched && !deft) do {
-          Log.env.codeBoundary("matched with no default", nameOrEmpty(entry))
+        explicit = isExplicitOrFalse(entry)
+        // we need to handle this case still
+        if (matched && !explicit) do {
+          Log.env.codeBoundary("matched with no explicit", nameOrEmpty(entry))
         }
-        return matched && deft
+        return matched
+        // return matched
       },
       list,
     )

@@ -6,22 +6,24 @@ Just |: Maybe
 
 Types are where Madlib really shines.
 
-If you've worked in Haskell before, these are _mostly_ the same types you're used to. See [[Coming from Haskell]] for a brief overview of the differences. There is also a [[Coming From JavaScript]] page.
+If you've worked in Haskell before, these are _mostly_ the same types you're used to. See [Coming from Haskell](Coming%20from%20Haskell) for a brief overview of the differences. There is also a [Coming From JavaScript](How-To%20Guides/Coming%20From%20JavaScript.md) page.
 
-For the built-in types of [[Prelude]], there are a number of more specific pages you can peruse; for this document we'll primarily talk about custom / user-defined types, and aliases, which are effectively a shorthand for referencing types.
+For the built-in types of [Prelude](Prelude), there are a number of more specific pages you can peruse; for this document we'll primarily talk about custom / user-defined types, and aliases, which are effectively a shorthand for referencing types.
+
 
 # Types
 
-First we'll give a few examples of some custom type definitions to give you a feel for the versatility and expressiveness of this:
+First we'll give a few examples of some custom type definitions
 
 ```madlib
 type Whatever = Whatever
 type Reference = Unknown | Known(String)
 type Color = Hex(String) | RGB(Integer, Integer, Integer)
-export Suit = Hearts | Diamonds | Spades | Clubs
+export type Suit = Hearts | Diamonds | Spades | Clubs
 export type Card = Card(Suit, Integer)
 type Character a b = Character(String, String, List a, b)
 ```
+
 
 Now we'll break down these examples:
 
@@ -31,137 +33,38 @@ Let's break down how we define a type.
 
 1. A type can define a single constructor, which must start with a capital letter, e.g. `type TypeName = Constructor` defines a Constructor named constructor of type TypeName
 2. A type can define multiple constructors, which must start with a capital letter, e.g. `type Critter = Bug | Creepy | Crawly` defines a type Critter which has three singleton constructors, "Bug", "Creepy" and "Crawly"
-3. A type can contain other types. These can be [[literal types]], e.g. `type Receipt = Receipt(Integer)`
-4. A type can contain other types. These can be type variables, e.g. `type Order a = Order(Integer, a)`
-5. A type can contain other types, e.g. `type Order a = Order(Integer, List a)`. This includes custom types: `type Superorder = Superorder(Integer, List (Order a))`.
-6. A type can optionally be exported, which makes it usable outside of the file it is defined in, using the `export` keyword, e.g. `export type Type = Constructor`
+3. A type can contain values. These can be [literals](literals), e.g. `type Receipt = Receipt(Integer)`
+4. A type can contain values. These can be type variables, e.g. `type Order a = Order(Integer, a)`
+5. A type can contain other types, e.g. `type Order a = Order(Integer, List a)`
+6. A type can optionally be exported, using the `export` keyword, e.g. `export type Type = Constructor`
 
 ## Constructors
 
-Constructors are formal values which represent a concrete type that the compiler understands.
+### Singleton Type Constructors
 
-## Singleton
+A type constructor can have zero to many values within it. A type constructor with zero values is called a singleton / singleton constructor. One very commonly used singleton instance in [Prelude](Prelude) is `Nothing`, of the `Maybe` type — it can allow us to model things so that only valid cases will execute, e.g. `map(Math.add(5), Just(3))` will add 5 given a `Just`, but will do nothing given a `Nothing`, which makes it useful for things like user inputs or defaults.
 
-A type constructor can have zero to many values within it. A type constructor with zero values is called a singleton. 
+### Type Constructors
 
-We can use a singleton to express something which might otherwise be a representative literal in other languages as a full type:
-
-```madlib#singleton
-type Cycle = Day | Night | Dusk
-type Arachnid = Spider | Scorpion | Tick | Mite | Other
-```
-
-This allows us to express the types in [[type signatures]], such as:
-```madlib
-isSpider :: Arachnid -> Boolean
-isSpider = where {
-  Spider => true
-  _ => false
-}
-```
-
-Note that we're using the name of the type ("Arachnid") here rather than one of the constructors. The type should be used in signatures. The constructors should be used in code.
-
-
-## Container types
-
-Unlike a singleton, a container type constructor has values within it. Thus it can have many different instances. These interior values can be types or type variables. 
-
-### Container types with literal values
+Many type constructors contain values. This allows the constructed type to encapsulate more complex values while being passed around as a concrete value, e.g.
 
 ```madlib
-type Ingredient = Ingredient(String, Integer)
-type Pizza = Pizza(String, List Ingredient)
+type Page = Page(String, String)
+type Example = BadRef | Link(Page, String) | Demo(Page, String)
 ```
 
+We can create an instance of `Page` by invoking its only type constructor, eponymously named `Page`: `p = Page("Title of Page", "Page Content")`. If we want to create an `Example` type, we have to use `BadRef` or `Link` or `Demo`. Sometimes this pattern engenders confusion at first. The left side of the assignment operator is the name of the type. The right side of the assignment of the operator contains the type constructors, which can be one to many. Similarly, each type constructor can contain one to many literal values.
 
-We have to pass these values to the constructor in order to create the instance.
+### Type Variables
+
+We sometimes want to bind the type constructor to a variable type. For instance, the `List` type is one such constructor. You can have a list of integers or a list of strings, but because it's defined as a type constructor of `List a`, you cannot have a mixed list, as that would violate the specificity of `a`.
+
+Here's a simple example with a custom type:
 
 ```madlib
-redSauce = Ingredient("Tomato Sauce", 0.3)
-pestoSauce = Ingredient("Pesto", 0.3)
-cheese = Ingredient("Mozzarella Cheese", 0.5)
-pepperoni = Ingredient("Pepperoni", 4)
-corn = Ingredient("Corn", 0.23)
-habanero = Ingredient("Habanero", 2)
-
-pizzaCheese = Pizza("Cheese", [redSauce, cheese])
-pizzaPesto = Pizza("Pesto Pie", [pesto, cheese])
-pizzaHotPeppercorn = Pizza("Hot Peppercorn", [cheese, pepperoni, corn, habanero])
+type Item a = Item(String, a)
+coolNice = Item("cool", Just("nice"))
 ```
-
-We can use `where` to access these interior values (or similar sugar).
-
-```madlib
-ingredientName :: Ingredient -> String
-ingredientName = where {
-  Ingredient(_name, _) => _name
-}
-
-ingredientCost :: Ingredient -> Integer
-ingredientCost = where {
-  Ingredient(_, _cost) => _cost
-}
-
-pizzaName :: Pizza -> String
-pizzaName = where {
-  Pizza(_name, _) => _name
-}
-
-pizzaIngredients :: Pizza -> List Ingredients
-pizzaIngredients = where {
-  Pizza(_, _ing) => _ing
-}
-```
-
-### Container types with type variables
-
-We can also define container types with a type variable, which allows us to define polymorphic types. (We can also constrain these variables, but that is beyond the scope of this document.)
-
-```madlib
-type Box a = Box(a)
-type Relation a b = Orthogonal(b) | Related(a)
-```
-
-We can create instances like so:
-```madlib
-shipping = Box("balikbayan")
-bento = Box("lunch")
-unrelated = Orthogonal("Irrelevant")
-unrelatedYear = Orthogonal(2020)
-```
-
-It is invalid to attempt to mix types. For instance, given the above
-```madlib#_
-list = [unrelated, unrelatedYear]
-```
-
-Will create a type error. This is because we've defined a value with a single value `b` for the Orthogonal constructor. It can either be a String or an Integer, but not both.  
-
-However, because of how we've defined it, we _can_ have a list of values that are different type variables:
-
-```madlib
-list2 = [Orthogonal(200), Related("strongly")]
-```
-
-This is because, per the `Relation` type's definition, in `list2`, `b` is an Integer, and `a` is a String.
-
-#### Challenge
-
-Can you define a function named `pizzaCost` that leverages the above functions to get the cost of a pizza based on its ingredients?
-
-```madlib
-pizzaCost = pipe(
-  pizzaIngredients,
-  map(ingredientCost),
-  List.reduce((a, b) => a + b, 0)
-)
-```
-
-
-
-A commonly used type in Prelude is [[Maybe|Nothing]], which we use to express one of two possible / "maybe" values: `type Maybe a = Just(a) | Nothing`. [[Maybe|Nothing]] is a singleton. [[Maybe|Just]] is a container type.
-
 
 ## Summary
 - Types
@@ -169,3 +72,5 @@ A commonly used type in Prelude is [[Maybe|Nothing]], which we use to express on
 - Literal Types
 - Aliases
 - Pipe & Curry
+
+***

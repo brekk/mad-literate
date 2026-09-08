@@ -8,7 +8,7 @@ import { INDENT, MAD_MARKER, MAIN_START } from "@/Constants"
 export _processMadmarker = Transformer.ofLine(
   (meta, _, line) => {
     hasMadmarker = meta.madmarker > -1
-    return if (!meta.isLibrary && hasMadmarker && line == MAD_MARKER) {
+    return if (!meta.isLibrary && !hasMadmarker && line == MAD_MARKER) {
       // transform the madmarker into a main
       MAIN_START
     } else {
