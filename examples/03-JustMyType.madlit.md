@@ -57,7 +57,7 @@ We can create an instance of `Page` by invoking its only type constructor, epony
 
 ```madlib#runnable.type-constructor
 p = Page("Headline", "Wow, what a content")
-IO.pTrace("This is a page instance", p)
+// IO.pTrace("This is a page instance", p)
 ```
 
 

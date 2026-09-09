@@ -56,7 +56,10 @@ type Example = BadRef | Link(Page, String) | Demo(Page, String)
 
 
 p = Page("Headline", "Wow, what a content")
-IO.pTrace("This is a page instance", p)
+// IO.pTrace("This is a page instance", p)
+
+
+
 //  If we want to create an `Example` type, we have to use `BadRef` or `Link` or `Demo`. Sometimes this pattern engenders confusion at first. The left side of the assignment operator is the name of the type. The right side of the assignment of the operator contains the type constructors, which can be one to many. Similarly, each type constructor can contain one to many literal values.
 
 //  ### Type Variables

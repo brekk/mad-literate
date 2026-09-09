@@ -154,11 +154,11 @@ getBoxMap = pipe(
   /* throw away the results that aren't Madlib code blocks */
   excludeNothing,
 )
-boxlog = _Fn.once(IO.pTrace("BOXMAPS"))
+// boxlog = _Fn.once(IO.pTrace("BOXMAPS"))
 checkBoundariesForIndex :: List #[Integer, String] -> Integer -> Boolean
 export checkBoundariesForIndex = (pairs, i) => pipe(
   getBoxMap,
-  boxlog,
+  // boxlog,
   (list) => {
     return List.any(
       ({ start, end, entry }) => {
