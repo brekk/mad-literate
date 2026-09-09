@@ -15,7 +15,7 @@ For the built-in types of [Prelude](Prelude), there are a number of more specifi
 
 First we'll give a few examples of some custom type definitions
 
-```madlib
+```madlib#types-summary
 type Whatever = Whatever
 type Reference = Unknown | Known(String)
 type Color = Hex(String) | RGB(Integer, Integer, Integer)
@@ -48,12 +48,20 @@ A type constructor can have zero to many values within it. A type constructor wi
 
 Many type constructors contain values. This allows the constructed type to encapsulate more complex values while being passed around as a concrete value, e.g.
 
-```madlib
+```madlib#type-defs.type-constructor
 type Page = Page(String, String)
 type Example = BadRef | Link(Page, String) | Demo(Page, String)
 ```
 
-We can create an instance of `Page` by invoking its only type constructor, eponymously named `Page`: `p = Page("Title of Page", "Page Content")`. If we want to create an `Example` type, we have to use `BadRef` or `Link` or `Demo`. Sometimes this pattern engenders confusion at first. The left side of the assignment operator is the name of the type. The right side of the assignment of the operator contains the type constructors, which can be one to many. Similarly, each type constructor can contain one to many literal values.
+We can create an instance of `Page` by invoking its only type constructor, eponymously named `Page`: `p = Page("Title of Page", "Page Content")`.
+
+```madlib#runnable.type-constructor
+p = Page("Headline", "Wow, what a content")
+IO.pTrace("This is a page instance", p)
+```
+
+
+If we want to create an `Example` type, we have to use `BadRef` or `Link` or `Demo`. Sometimes this pattern engenders confusion at first. The left side of the assignment operator is the name of the type. The right side of the assignment of the operator contains the type constructors, which can be one to many. Similarly, each type constructor can contain one to many literal values.
 
 ### Type Variables
 
@@ -63,7 +71,6 @@ Here's a simple example with a custom type:
 
 ```madlib
 type Item a = Item(String, a)
-coolNice = Item("cool", Just("nice"))
 ```
 
 ## Summary
