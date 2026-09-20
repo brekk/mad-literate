@@ -24,12 +24,15 @@ import _String from "@/String"
 ```madlib#example
 ```madlib#id-no-spaces
 
-// with repeated id and index : only render one (implied rendering index is the last one)
+// with index / channel, no id
+```madlib.0
+
+// with repeated id and index / channel : only render one (implied rendering index is the last one)
 ```madlib#id-no-spaces.0
 ```madlib#id-no-spaces.1
 ```madlib#id-no-spaces.2
 
-// wth repeated id and index : doesn't need to be a number, because it's not
+// wth repeated id and index / channel : doesn't need to be a number, because it's not
 ```madlib#declaration.one
 ```madlib#declaration.two
 ```madlib#declaration.arbitrary-whatever
@@ -40,6 +43,11 @@ import _String from "@/String"
 ```madlib#deriving-comparable.equalTo!
 ```madlib#deriving-comparable.greaterThan
 
+// specific global ids / channels
+// force rendering before the main
+```madlib.@head
+// force rendering after the main
+```madlib.@body
 
 */
 K = Fn.always
@@ -154,11 +162,11 @@ getBoxMap = pipe(
   /* throw away the results that aren't Madlib code blocks */
   excludeNothing,
 )
-// boxlog = _Fn.once(IO.pTrace("BOXMAPS"))
+boxlog = _Fn.once(IO.pTrace("BOXMAPS"))
 checkBoundariesForIndex :: List #[Integer, String] -> Integer -> Boolean
 export checkBoundariesForIndex = (pairs, i) => pipe(
   getBoxMap,
-  // boxlog,
+  boxlog,
   (list) => {
     return List.any(
       ({ start, end, entry }) => {
